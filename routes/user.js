@@ -9,7 +9,7 @@ router.get('/getUser', verifyAuth, function(req, res, next) {
   userService.getInfo(req.user.id, function(err, user) {
     if (err) res.json(err);
     if (user) res.json(user);
-  })
+  });
 });
 
 
