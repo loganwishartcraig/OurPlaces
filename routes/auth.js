@@ -18,17 +18,10 @@ router.get('/google/cb',
     // successRedirect: '/home'
   }),
   function(req, res) {
+
     userService.findOrCreate(req.user, function(err, user) {
-
-      console.log(err, user);
-
-      // if (err) res.send(err);
-      // if (user) res.send(user);
-
-      // res.sendStatus(200);
-      res.redirect('/home');
+      res.redirect('/');
     });
-    // res.sendStatus('200');
   });
 
 module.exports = router;

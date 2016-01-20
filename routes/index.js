@@ -4,15 +4,14 @@ var router = express.Router();
 /* GET home page. */
 router.get('/', function(req, res, next) {
 
-  res.render('index', { title: 'Express' });
-});
+  if (req.isAuthenticated()) {
+    res.render('home', {authenticated: true});
+  }else {
+    res.render('index', {authenticated: false});
+  }});
 
 router.get('/register', function(req, res, next) {
   res.render('register');
-});
-
-router.get('/home', verifyAuth, function(req, res, next) {
-  res.render('home');
 });
 
 

@@ -42,40 +42,15 @@
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	'use strict';
-
-	var Auth = __webpack_require__(1);
+	"use strict";
 
 	$(document).ready(function () {
 
 	  // Auth.getToken('loganwishartcraig@gmail.com', 'm0mandD4D~');
 
 	});
-
-/***/ },
-/* 1 */
-/***/ function(module, exports) {
-
-	'use strict';
-
-	module.exports = {
-
-	  getToken: function getToken(user, pass) {
-
-	    console.log(user, pass);
-
-	    var base = 'https://accounts.google.com/o/oauth2/v2/auth?response_type=token&client_id=919257842102-bpf16gm6ga69os8vl809l82biiqc5j40.apps.googleusercontent.com&nonce=DgkRrHXmyu3KLd0KDdfq';
-	    $.get(base, function (res) {
-	      console.log(res);
-	    });
-	  }
-
-	};
-
-	// cid: 919257842102-bpf16gm6ga69os8vl809l82biiqc5j40.apps.googleusercontent.com
-	// secret: JYOtDKIMTt9ebWAYowix-NlM
 
 /***/ }
 /******/ ]);

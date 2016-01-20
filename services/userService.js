@@ -22,6 +22,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
   User.findOne({userId: userToAdd.id}, function(err, user) {  
     console.log(user, userToAdd.id);
+    if (err) return next({message: err});
     if (user) return next(null, user);
    
     console.log("making user");
@@ -48,10 +49,13 @@ exports.findOrCreate = function(userToAdd, next) {
 
 exports.getInfo = function(userId, next) {
 
-
+  User.findOne({userId: userId}, function(err, user) {
+    if (user === undefined) return next({message: "User not found"});
+    return next(null, serealizeUserResult(user));
+  });
 
   
-}
+};
 
 
 };
