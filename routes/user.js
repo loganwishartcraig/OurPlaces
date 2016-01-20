@@ -1,18 +1,15 @@
 var express = require('express');
 var router = express.Router();
+var userService = require('../services/userService');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-
   res.render('index', { title: 'Express' });
 });
 
-router.get('/register', function(req, res, next) {
-  res.render('register');
-});
 
-router.get('/home', verifyAuth, function(req, res, next) {
-  res.render('home');
+router.get('/getUser', verifyAuth, function(req, res, next) {
+  res.sendStatus('200');
 });
 
 

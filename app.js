@@ -9,8 +9,12 @@ var expressSession = require('express-session');
 var passport = require('passport');
 var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/OurPlaces');
+
 var routes = require('./routes/index');
 var auth = require('./routes/auth');
+var user = require('./routes/user');
 
 var app = express();
 
@@ -56,6 +60,7 @@ app.use(passport.session());
 
 app.use('/', routes);
 app.use('/auth', auth);
+app.use('/user', user);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
