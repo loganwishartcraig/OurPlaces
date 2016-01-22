@@ -20,7 +20,25 @@
 <body>
   
   <h1>mayde itttt</h1>
-  <p>u're <i><span id="firstName">{{user.firstName}}</span></i></p>
+  <p>ur <i><span id="firstName">{{user.firstName}}</span></i></p>
+  <p>ur friends are</p>
+  <ul>
+  {{#each user.friends}}
+    <li>{{this}}</li>
+  {{/each}}
+  </ul>
+  <p>u have requests from these guyz</p>
+  <ul id="friendRequests">
+  {{#each user.friendRequests}}
+    <li>{{this}}</li>
+  {{/each}}
+  </ul>
+  <br>
+  <form action="/user/addRequest" method="post">
+  <label>Add</label>
+  <input type="text" name="userToAdd" placeholder="Add">
+  <button type="submit">Add</button>
+  </form>
   <script src="http://localhost:3000/js/jquery-2.2.0.js"></script>
   <script src="http://localhost:3000/js/bundle.js"></script>
 </body>

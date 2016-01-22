@@ -5,11 +5,16 @@ var router = express.Router();
 router.get('/', function(req, res, next) {
 
   if (req.isAuthenticated()) {
-    res.render('home', {authenticated: true, user: req.user
+    res.render('home', {
+      authenticated: true,
+      user: req.user
     });
-  }else {
-    res.render('index', {authenticated: false});
-  }});
+  } else {
+    res.render('index', {
+      authenticated: false
+    });
+  }
+});
 
 router.get('/register', function(req, res, next) {
   res.render('register');
@@ -18,7 +23,9 @@ router.get('/register', function(req, res, next) {
 
 function verifyAuth(req, res, next) {
   console.log(req.user);
-  if (req.isAuthenticated()) { return next(); }
+  if (req.isAuthenticated()) {
+    return next();
+  }
   res.redirect('/');
 }
 
