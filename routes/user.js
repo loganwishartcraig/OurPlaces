@@ -41,6 +41,19 @@ router.post('/addRequest', verifyAuth, function(req, res) {
   });
 });
 
+router.post('/removeRequest', verifyAuth, function(req, res) {
+
+  userService.removeRequest(req.body.friendId, req.user.id, function(err) {
+    if (err) res.json(err);
+    else res.sendStatus(200);
+  });
+  
+});
+
+router.post('/addFriend', verifyAuth, function(req, res) {
+  console.log('adding friend', req.body);
+  res.sendStatus(200);  
+});
 
 function verifyAuth(req, res, next) {
   if (req.isAuthenticated()) { return next(); }

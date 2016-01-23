@@ -6,18 +6,11 @@ router.get('/', function(req, res, next) {
 
   if (req.isAuthenticated()) {
     res.render('home', {
-      authenticated: true,
       user: req.user
     });
   } else {
-    res.render('index', {
-      authenticated: false
-    });
+    res.render('index');
   }
-});
-
-router.get('/register', function(req, res, next) {
-  res.render('register');
 });
 
 

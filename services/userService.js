@@ -24,9 +24,7 @@ exports.findOrCreate = function(userToAdd, next) {
     userId: userToAdd.id
   }, function(err, user) {
     console.log(user, userToAdd.id);
-    if (err) return next({
-      message: err
-    });
+    if (err) return next({message: "Error looking up user"});
     if (user) return next(null, user);
 
     console.log("making user");
@@ -39,12 +37,10 @@ exports.findOrCreate = function(userToAdd, next) {
       lastName: userToAdd.name.familyName
     });
 
-    console.log("saving user");
+    console.log("saving user", newUser);
 
     newUser.save(function(err, user) {
-      if (err) return next({
-        message: err.message
-      });
+      if (err) return next({message: "Error saving user"});
       console.log("no error saving", user.id);
       if (user) return next(false, user.userId);
     });
@@ -56,6 +52,7 @@ exports.findOrCreate = function(userToAdd, next) {
     User.findOne({
       userId: userId
     }, function(err, user) {
+      if (err) return next({message: "Error looking up user"});
       if (!user) return next({
         message: "User not found"
       });
@@ -67,32 +64,67 @@ exports.findOrCreate = function(userToAdd, next) {
 
   exports.addRequest = function(userToAdd, userAdding, next) {
 
+    console.log('adding friend request');
     User.findOne({
       firstName: userToAdd
     }, function(err, user) {
+      if (err) return next({
+        message: "Error looking up user"
+      });
       if (!user) return next({
         message: "User not found"
       });
-
       if (user.friendRequests.hasOwnProperty(userAdding.id)) return next({
         message: "Freind request already pending :/"
       });
-
-      console.log(userAdding);
 
       user.friendRequests[userAdding.id] = {
         firstName: userAdding.name.givenName,
         lastName: userAdding.name.familyName
       };
 
-      user.save(function(err) {
-        if (err) return next({
-          message: err
-        });
+      user.markModified('friendRequests');
+      console.log('saving request');
+
+      user.save(function(err, record) {
+        if (err) return next({message: "Error saving user"});
+        console.log("user saved", record);
         return next(null);
       });
 
     });
+
+  };
+
+  exports.removeRequest = function(userToRemove, userId, next) {
+
+    console.log('finding user');
+    User.findOne({
+      userId: userId
+    }, function(err, user) {
+      console.log('user lookup complete');
+      if (err) return next({message: "Error looking up user"});
+      if (!user) return next({message: "User not found"});
+      if (!user.friendRequests.hasOwnProperty(userToRemove)) return next({message: 
+        "Friend request not found"});
+
+      delete user.friendRequests[userToRemove];
+      user.markModified('friendRequests');
+      
+      console.log('saving user', user);
+      user.save(function(err) {
+        User.findOne(user, function(err, person) {
+          console.log(err, person);
+        });
+        if (err) return next({message: "Error saving user"});
+        console.log('user saved');
+        return next(null);
+      });
+
+    });
+
+
+
 
   };
 
@@ -101,10 +133,16 @@ exports.findOrCreate = function(userToAdd, next) {
 
 
     console.log('getting requests');
-    User.findOne({userId: userId}, function(err, user) {
-      if (err) return next({message: err});
-      if (!user) return next({message: "User not found"});
-      console.log('found user, returning requests');
+    User.findOne({
+      userId: userId
+    }, function(err, user) {
+      if (err) return next({
+        message: err
+      });
+      if (!user) return next({
+        message: "User not found"
+      });
+      console.log('found user');
       return next(null, user.friendRequests);
     });
 
