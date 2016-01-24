@@ -11,6 +11,7 @@ function serealizeUserResult(userRecord) {
   toReturn.friends = userRecord.friends;
   toReturn.ownedPlaced = userRecord.ownedPlaced;
   toReturn.friendsPlaces = userRecord.friendsPlaces;
+  toReturn.friendRequests = userRecord.friendRequests;
   return toReturn;
 
 }
@@ -24,7 +25,9 @@ exports.findOrCreate = function(userToAdd, next) {
     userId: userToAdd.id
   }, function(err, user) {
     console.log(user, userToAdd.id);
-    if (err) return next({message: "Error looking up user"});
+    if (err) return next({
+      message: "Error looking up user"
+    });
     if (user) return next(null, user);
 
     console.log("making user");
@@ -40,7 +43,9 @@ exports.findOrCreate = function(userToAdd, next) {
     console.log("saving user", newUser);
 
     newUser.save(function(err, user) {
-      if (err) return next({message: "Error saving user"});
+      if (err) return next({
+        message: "Error saving user"
+      });
       console.log("no error saving", user.id);
       if (user) return next(false, user.userId);
     });
@@ -51,8 +56,10 @@ exports.findOrCreate = function(userToAdd, next) {
 
     User.findOne({
       userId: userId
-    }, function(err, user) {
-      if (err) return next({message: "Error looking up user"});
+    }).populate('friends', 'firstName lastName').exec(function(err, user) {
+      if (err) return next({
+        message: "Error looking up user"
+      });
       if (!user) return next({
         message: "User not found"
       });
@@ -64,33 +71,38 @@ exports.findOrCreate = function(userToAdd, next) {
 
   exports.addRequest = function(userToAdd, userAdding, next) {
 
-    console.log('adding friend request');
-    User.findOne({
-      firstName: userToAdd
-    }, function(err, user) {
-      if (err) return next({
-        message: "Error looking up user"
-      });
-      if (!user) return next({
-        message: "User not found"
-      });
-      if (user.friendRequests.hasOwnProperty(userAdding.id)) return next({
-        message: "Freind request already pending :/"
-      });
+    User.findOne({firstName: userToAdd})
+        .populate('friends', 'userId')
+        .exec(function(err, user) {
+          if (err) return next({
+            message: "Error looking up user"
+          });
+          if (!user) return next({
+            message: "User not found"
+          });
+          if (user.friendRequests.hasOwnProperty(userAdding.id)) return next({
+            message: "Freind request already pending :/"
+          });
 
-      user.friendRequests[userAdding.id] = {
-        firstName: userAdding.name.givenName,
-        lastName: userAdding.name.familyName
-      };
+          for (var i = 0; i < user.friends.length; i++)
+            if (user.friends[i].userId === userAdding.id) return next({message: "User is already ur friend :)"});
 
-      user.markModified('friendRequests');
-      console.log('saving request');
+          user.friendRequests[userAdding.id] = {
+            id: userAdding.id,
+            firstName: userAdding.name.givenName,
+            lastName: userAdding.name.familyName
+          };
 
-      user.save(function(err, record) {
-        if (err) return next({message: "Error saving user"});
-        console.log("user saved", record);
-        return next(null);
-      });
+          user.markModified('friendRequests');
+          console.log('saving request');
+
+          user.save(function(err, record) {
+            if (err) return next({
+              message: "Error saving user"
+            });
+            console.log("user saved", record);
+            return next(null);
+          });
 
     });
 
@@ -103,20 +115,27 @@ exports.findOrCreate = function(userToAdd, next) {
       userId: userId
     }, function(err, user) {
       console.log('user lookup complete');
-      if (err) return next({message: "Error looking up user"});
-      if (!user) return next({message: "User not found"});
-      if (!user.friendRequests.hasOwnProperty(userToRemove)) return next({message: 
-        "Friend request not found"});
+      if (err) return next({
+        message: "Error looking up user"
+      });
+      if (!user) return next({
+        message: "User not found"
+      });
+      if (!user.friendRequests.hasOwnProperty(userToRemove)) return next({
+        message: "Friend request not found"
+      });
 
       delete user.friendRequests[userToRemove];
       user.markModified('friendRequests');
-      
+
       console.log('saving user', user);
       user.save(function(err) {
         User.findOne(user, function(err, person) {
           console.log(err, person);
         });
-        if (err) return next({message: "Error saving user"});
+        if (err) return next({
+          message: "Error saving user"
+        });
         console.log('user saved');
         return next(null);
       });
@@ -128,24 +147,48 @@ exports.findOrCreate = function(userToAdd, next) {
 
   };
 
+  exports.addFriend = function(userId, friendId, next) {
 
-  exports.getFriendRequests = function(userId, next) {
+    User.findOne({userId: userId})
+        .populate('friends')
+        .exec(function(err, user) {
+          if (err) return next({message: err});
+          if (!user) return next({message: "User not found"});
+          if (!user.friendRequests.hasOwnProperty(friendId)) 
+            return next({message: "User hasn't requested"});
 
+          for (var i = 0; i < user.friends.length; i++)
+            if (user.friends[i].userId === friendId) return next({message: "User is already ur friend :)"});
 
-    console.log('getting requests');
-    User.findOne({
-      userId: userId
-    }, function(err, user) {
-      if (err) return next({
-        message: err
-      });
-      if (!user) return next({
-        message: "User not found"
-      });
-      console.log('found user');
-      return next(null, user.friendRequests);
-    });
+          User.findOne({userId: friendId})
+              .populate('friends')
+              .exec(function(err, friend) {
+                if (err) return next({message: err});
+                if (!friend) return next({message: "Friend not found"});
 
-  };
+                for (var i = 0; i < friend.friends.length; i++)
+                  if (friend.friends[i].userId === userId) return next({message: "Friend already has u added?"});
+                delete user.friendRequests[friendId];
+                user.markModified('friendRequests');
+
+                user.friends.push(friend);
+                user.markModified('friends');
+
+                friend.friends.push(user);
+                friend.markModified('friends');
+
+                friend.save(function(err) {
+                  if (err) return next({message: "error saving friend"});
+                  user.save(function(err) {
+                    if (err) return next({message: "error saving user"});
+                    return next(null);
+                  });
+                });
+
+              });
+
+        });
+
+    };
 
 };

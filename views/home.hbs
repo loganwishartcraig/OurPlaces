@@ -24,15 +24,18 @@
   <p>ur friends are</p>
   <ul>
   {{#each user.friends}}
-    <li>{{this}}</li>
+    <li class="friend--item">{{this.firstName}} {{this.lastName}}</li>
   {{/each}}
   </ul>
   <p>u have requests from these guyz</p>
   <ul id="friendRequests">
   {{#each user.friendRequests}}
-    <li>{{this}}</li>
+    <li class="request--item"><strong>{{this.firstName}}</strong> wants to add ya.<br>
+    <button type="button" value="{{this.id}}" action="ACCEPT">Accept</button>
+    <button type="button" value="{{this.id}}" action="DECLINE">Decline</button></li>
   {{/each}}
   </ul>
+
   <br>
   <form action="/user/addRequest" method="post">
   <label>Add</label>

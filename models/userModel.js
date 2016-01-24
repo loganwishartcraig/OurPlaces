@@ -6,7 +6,7 @@ module.exports = mongoose.model('User', new Schema({
   // email: String,
   firstName: String,
   lastName: String,
-  friends: {type: Array, default: []},
+  friends: [{type: Schema.ObjectId, ref: 'User'}],
   friendRequests: {type: Schema.Types.Mixed, default: {}},
   ownedPlaces: {type: Array, default: []},
   friendsPlaces: {type: Array, default: []},
