@@ -48,6 +48,15 @@ router.post('/acceptRequest', verifyAuth, function(req, res) {
   });
 });
 
+router.post('/removeFriend', verifyAuth, function(req, res) {
+
+  userService.removeFriend(req.user.id, req.body.friendId, function(err) {
+    if (err) res.status(501).json(err);
+    else res.sendStatus(200);
+  });
+
+});
+
 function verifyAuth(req, res, next) {
   if (req.isAuthenticated()) {
     return next();

@@ -22,9 +22,9 @@
   <h1>mayde itttt</h1>
   <p>ur <i><span id="firstName">{{user.firstName}}</span></i></p>
   <p>ur friends are</p>
-  <ul>
+  <ul id="friendList">
   {{#each user.friends}}
-    <li class="friend--item">{{this.firstName}} {{this.lastName}}</li>
+    <li class="friend--item">{{this.firstName}} {{this.lastName}} <button type="button" action="DELETE" value="{{this.userId}}">Remove :(</button></li>
   {{/each}}
   </ul>
   <p>u have requests from these guyz</p>
@@ -42,6 +42,7 @@
   <input type="text" name="userToAdd" placeholder="Add">
   <button type="submit">Add</button>
   </form>
+
   <script src="http://localhost:3000/js/jquery-2.2.0.js"></script>
   <script src="http://localhost:3000/js/bundle.js"></script>
 </body>

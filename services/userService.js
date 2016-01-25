@@ -9,7 +9,7 @@ function serealizeUserResult(userRecord) {
   toReturn.firstName = userRecord.firstName;
   toReturn.lastName = userRecord.lastName;
   toReturn.friends = userRecord.friends;
-  toReturn.ownedPlaced = userRecord.ownedPlaced;
+  toReturn.ownedPlaces = userRecord.ownedPlaces;
   toReturn.friendsPlaces = userRecord.friendsPlaces;
   toReturn.friendRequests = userRecord.friendRequests;
   return toReturn;
@@ -56,7 +56,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
     User.findOne({
       userId: userId
-    }).populate('friends', 'firstName lastName').exec(function(err, user) {
+    }).populate('friends', 'firstName lastName userId').exec(function(err, user) {
       if (err) return next({
         message: "Error looking up user"
       });
@@ -70,6 +70,7 @@ exports.findOrCreate = function(userToAdd, next) {
   };
 
   exports.addRequest = function(userToAdd, userAdding, next) {
+
 
     User.findOne({firstName: userToAdd})
         .populate('friends', 'userId')
@@ -168,6 +169,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
                 for (var i = 0; i < friend.friends.length; i++)
                   if (friend.friends[i].userId === userId) return next({message: "Friend already has u added?"});
+
                 delete user.friendRequests[friendId];
                 user.markModified('friendRequests');
 
@@ -188,6 +190,111 @@ exports.findOrCreate = function(userToAdd, next) {
               });
 
         });
+
+    };
+
+
+
+    function lookUpGenerator(userId) {
+
+      return new Promise(function(res, rej) {
+
+
+        User.findOne({userId: userId})
+            .populate('friends', 'userId firstName lastName')
+            .exec(function(err, user) {
+              if (err) return rej({message: "DB error looking up user"});
+              if (!user) return rej({message: "User not found"});
+              return res(user);
+            });
+
+
+      });
+
+    }
+
+    function findFriendIndex(friendList, friendId) {
+
+      for (var i = 0; i < friendList.length; i++)
+        if (friendList[i].userId === friendId) return i;
+      return -1;
+
+    }
+
+
+
+    exports.removeFriend  = function(userId, friendId, next) {
+
+      
+
+      lookUpGenerator(userId).then(function(user) {
+        // abustract dis out
+        var toRemove = findFriendIndex(user.friends, friendId);
+        
+        console.log('\tRemoving friend in pos ' + toRemove);
+
+        if (toRemove === -1) return next({message: "User isn't ur friend"});
+
+        user.friends.splice(toRemove, 1);
+        user.markModified('friends');
+        user.save();
+
+        return lookUpGenerator(friendId);
+
+      }, function(err) {
+        next(err);
+      }).then(function(friend) {
+
+        console.log(friend.friends, friendId);
+        var toRemove = findFriendIndex(friend.friends, userId);
+        
+        console.log('\tRemoving friend in pos ' + toRemove);
+
+        if (toRemove === -1) return next({message: "User isn't ur friend"});
+
+        friend.friends.splice(toRemove, 1);
+        friend.markModified('friends');
+        friend.save(function(err) {
+          if (err) return next({message: "error saving friend"});
+          return next(null);
+        });
+      }, function(err) {
+        next(err);
+      });
+
+
+
+
+      // var lookupUser = new Promise(function (res, rej) {
+
+      //   User.findOne({userId: userId}).populate('friends', 'userId').exec(function(err, user) {
+      //     if (err) return rej({message: "DB error looking up user"});
+      //     if (!user) return rej({message: "User not found"});
+
+      //     var friendKey;
+      //     for (var i = 0; i < user.friends.length; i++) {
+      //       console.log(user.friends[i].userId, friendId);
+      //       if (user.friends[i].userId === friendId) {
+      //         console.log("\tFOUND ITTT");
+      //         friendKey = i;
+      //         break; 
+      //       }
+      //     }
+
+      //     if (friendKey === undefined) return rej({message: "User isn't ur friend"});
+
+      //     res(user);
+      //   });
+
+      // });
+
+      // // make this whole 'user lookup' thing into a promise generator...
+
+      // lookupUser.then(function(result){
+      //   next(null, result);
+      // }, function(err) {
+      //   next(err);
+      // });
 
     };
 

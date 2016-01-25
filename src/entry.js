@@ -33,6 +33,28 @@ $(document).ready(function() {
     }
   }
 
-  document.getElementById('friendRequests').addEventListener('click', handleRequestAction);
+  function handleFriendAction(e) {
 
+     if (e.target.tagName === 'BUTTON') {
+      switch (e.target.getAttribute('action')) {
+        case 'DELETE':
+          $.post('/user/removeFriend', {
+            friendId: e.target.getAttribute('value')
+          }).success(function(msg) {
+            console.log(msg);
+          }).error(function(err) {
+            console.log(err);
+          });
+          break;
+        default:
+          console.log('action not found...');
+          
+          break;
+      }
+    }
+
+  }
+
+  document.getElementById('friendRequests').addEventListener('click', handleRequestAction);
+  document.getElementById('friendList').addEventListener('click', handleFriendAction);
 });
