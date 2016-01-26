@@ -11,20 +11,13 @@ router.get('/getUser', verifyAuth, function(req, res) {
   });
 });
 
-// router.get('/getFriendRequests', verifyAuth, function(req, res) {
-
-//   userService.getFriendRequests(req.user.id, function(err, data) {
-//     if (err) res.status(501).json(err);
-//     else res.json(data);
-//   });
-
-// });
+// I think u can use generators here
 
 router.post('/addRequest', verifyAuth, function(req, res) {
-  if (req.body.userToAdd === req.user.name.givenName) {
-    res.sendStatus(400);
+  if (req.body.friendId === req.user.name.givenName) {
+    res.status(400).json({message: "U can't add urself :o"});
   } else {
-    userService.addRequest(req.body.userToAdd, req.user, function(err) {
+    userService.addRequest(req.body.friendId, req.user, function(err) {
       if (err) res.status(501).json(err);
       else res.sendStatus(200);
     });
@@ -42,6 +35,18 @@ router.post('/removeRequest', verifyAuth, function(req, res) {
 
 router.post('/acceptRequest', verifyAuth, function(req, res) {
   console.log('adding friend', req.body);
+
+  // userService.addFriend(req.user.id, req.body.friendId).then(function(msg){ 
+  //   console.log("removing")
+  //   userService.addFriend(req.body.friendId, req.user.id).then(function(msg) {
+  //     res.sendStatus(200);
+  //   }, function(err) {
+  //     res.status(501).json(err);
+  //   });
+  // }, function(err) {
+  //     res.status(501).json(err);
+  // });
+
   userService.addFriend(req.user.id, req.body.friendId, function(err) {
     if (err) res.status(501).json(err);
     else res.sendStatus(200);
@@ -50,9 +55,15 @@ router.post('/acceptRequest', verifyAuth, function(req, res) {
 
 router.post('/removeFriend', verifyAuth, function(req, res) {
 
-  userService.removeFriend(req.user.id, req.body.friendId, function(err) {
-    if (err) res.status(501).json(err);
-    else res.sendStatus(200);
+//maybe promise this thing too?
+  userService.removeFriend(req.user.id, req.body.friendId).then(function(msg){ 
+    userService.removeFriend(req.body.friendId, req.user.id).then(function(msg) {
+      res.sendStatus(200);
+    }, function(err) {
+      res.status(501).json(err);
+    });
+  }, function(err) {
+      res.status(501).json(err);
   });
 
 });
