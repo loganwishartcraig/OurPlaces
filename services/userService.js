@@ -69,10 +69,12 @@ exports.findOrCreate = function(userToAdd, next) {
 
   };
 
-  exports.addRequest = function(userToAdd, userAdding, next) {
+  exports.addRequest = function(friendId, userAdding, next) {
 
+    console.log("\t\tLooking up user...", friendId, userAdding);
 
-    User.findOne({firstName: userToAdd})
+    
+    User.findOne({firstName: friendId})
         .populate('friends', 'userId')
         .exec(function(err, user) {
           if (err) return next({
@@ -143,56 +145,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
     });
 
-
-
-
   };
-
-  exports.addFriend = function(userId, friendId, next) {
-
-    User.findOne({userId: userId})
-        .populate('friends')
-        .exec(function(err, user) {
-          if (err) return next({message: err});
-          if (!user) return next({message: "User not found"});
-          if (!user.friendRequests.hasOwnProperty(friendId)) 
-            return next({message: "User hasn't requested"});
-
-          for (var i = 0; i < user.friends.length; i++)
-            if (user.friends[i].userId === friendId) return next({message: "User is already ur friend :)"});
-
-          User.findOne({userId: friendId})
-              .populate('friends')
-              .exec(function(err, friend) {
-                if (err) return next({message: err});
-                if (!friend) return next({message: "Friend not found"});
-
-                for (var i = 0; i < friend.friends.length; i++)
-                  if (friend.friends[i].userId === userId) return next({message: "Friend already has u added?"});
-
-                delete user.friendRequests[friendId];
-                user.markModified('friendRequests');
-
-                user.friends.push(friend);
-                user.markModified('friends');
-
-                friend.friends.push(user);
-                friend.markModified('friends');
-
-                friend.save(function(err) {
-                  if (err) return next({message: "error saving friend"});
-                  user.save(function(err) {
-                    if (err) return next({message: "error saving user"});
-                    return next(null);
-                  });
-                });
-
-              });
-
-        });
-
-    };
-
 
 
     function lookupUser(userId) {
@@ -200,16 +153,38 @@ exports.findOrCreate = function(userToAdd, next) {
       return (new Promise(function(res, rej) {
 
         User.findOne({userId: userId})
-            .populate('friends', 'userId firstName lastName')
+            .populate('friends')
             .exec(function(err, user) {
               if (err) return rej({message: "DB error looking up user"});
               if (!user) return rej({message: "User not found"});
+              console.log("Found User")
               return res(user);
             });
 
       }));
 
     }
+  
+//   function lookupTwo(firstUserId, secondUserId) {
+    
+//     return (new Promise(function(res, rej) {
+//                 console.log("\tretrieving users...", firstUserId, secondUserId);
+
+//         lookupUser(firstUserId).then(function(userOne) {
+//           console.log("\tlooking up first user")
+//           lookupUser(secondUserId).then(function(userTwo) {
+//             console.log("\tlooking up second user")
+//             return res([userOne, userTwo]);
+            
+//           }, function(err) {
+//             return rej(err);
+//           });
+//         }, function(err) {
+//           return rej(err);
+//         })
+//       })
+//     )
+//   }
 
     function findFriendIndex(friendList, friendId) {
 
@@ -219,12 +194,60 @@ exports.findOrCreate = function(userToAdd, next) {
 
     }
 
+  
+  
+    exports.addFriend = function(userId, friendId) {
+
+      // pretty unhappy with this function. Tons of duplicated code.
+      return (
+        new Promise(function(res, rej) {
+              
+          lookupTwo(userId, friendId).then(function(userList) {
+            
+          var user = userList[0],
+              friend = userList[1];
+                   
+          if (findFriendIndex(user.friends, friendId) !== -1) return rej({message: "User is already ur friend ;)"});
+          if (findFriendIndex(friend.friends, userId) !== -1) return rej({message: "Friend already has u as a friend?"});
+            
+          if (user.friendRequests[friendId]) {
+            delete user.friendRequests[friendId];
+            user.markModified('friendRequests');
+          }
+            
+          if (friend.friendRequests[userId]) {
+            delete friend.friendRequests[userId];
+            friend.markModified('friendRequests');
+          }
+                        
+          user.friends.push(friend);
+          user.markModified('friends');
+            
+          friend.friends.push(user);
+          friend.markModified('friends');
+                        
+          user.save(function(err) {
+            if (err) return rej({message: "Error saving user..."});
+            friend.save(function(err) {
+              if (err) return rej({message: "Error saving friend..."});
+              return res();  
+            })
+          })
+          }, function(err) {
+            return rej(err)
+          })
+        })
+      );
+
+    };
+
+  
     exports.removeFriend = function(userId, friendId) {
       return (
         new Promise(function(res, rej) {
 
           lookupUser(userId).then(function(user) {
-
+            
             var toRemove = findFriendIndex(user.friends, friendId);
     
             if (toRemove === -1) return rej({message: "User isn't a friend"});

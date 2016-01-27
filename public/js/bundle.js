@@ -58,6 +58,7 @@
 	    if (e.target.tagName === 'BUTTON') {
 	      switch (e.target.getAttribute('action')) {
 	        case 'ACCEPT':
+	          console.log('accpeting request');
 	          $.post('/user/acceptRequest', {
 	            friendId: e.target.getAttribute('value')
 	          }).success(function (msg) {
