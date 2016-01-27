@@ -69,84 +69,9 @@ exports.findOrCreate = function(userToAdd, next) {
 
   };
 
-  exports.addRequest = function(friendId, userAdding, next) {
-
-    console.log("\t\tLooking up user...", friendId, userAdding);
-
-    
-    User.findOne({firstName: friendId})
-        .populate('friends', 'userId')
-        .exec(function(err, user) {
-          if (err) return next({
-            message: "Error looking up user"
-          });
-          if (!user) return next({
-            message: "User not found"
-          });
-          if (user.friendRequests.hasOwnProperty(userAdding.id)) return next({
-            message: "Freind request already pending :/"
-          });
-
-          for (var i = 0; i < user.friends.length; i++)
-            if (user.friends[i].userId === userAdding.id) return next({message: "User is already ur friend :)"});
-
-          user.friendRequests[userAdding.id] = {
-            id: userAdding.id,
-            firstName: userAdding.name.givenName,
-            lastName: userAdding.name.familyName
-          };
-
-          user.markModified('friendRequests');
-          console.log('saving request');
-
-          user.save(function(err, record) {
-            if (err) return next({
-              message: "Error saving user"
-            });
-            console.log("user saved", record);
-            return next(null);
-          });
-
-    });
-
-  };
-
-  exports.removeRequest = function(userToRemove, userId, next) {
-
-    console.log('finding user');
-    User.findOne({
-      userId: userId
-    }, function(err, user) {
-      console.log('user lookup complete');
-      if (err) return next({
-        message: "Error looking up user"
-      });
-      if (!user) return next({
-        message: "User not found"
-      });
-      if (!user.friendRequests.hasOwnProperty(userToRemove)) return next({
-        message: "Friend request not found"
-      });
-
-      delete user.friendRequests[userToRemove];
-      user.markModified('friendRequests');
-
-      console.log('saving user', user);
-      user.save(function(err) {
-        User.findOne(user, function(err, person) {
-          console.log(err, person);
-        });
-        if (err) return next({
-          message: "Error saving user"
-        });
-        console.log('user saved');
-        return next(null);
-      });
-
-    });
-
-  };
-
+  
+  // expects google 'user' object layout for 'userAdding'
+ 
 
     function lookupUser(userId) {
 
@@ -193,6 +118,67 @@ exports.findOrCreate = function(userToAdd, next) {
       return -1;
 
     }
+
+  
+   exports.addRequest = function(friendId, userAdding) {
+
+    return (
+        new Promise(function(res, rej) {
+          
+          var userAddingId = userAdding.id;
+          
+          lookupUser(friendId).then(function(user) {
+            console.log("\t\tChecking existing requests/firends");  
+            if (user.friendRequests.hasOwnProperty(userAddingId)) return rej({message: "Request already pennnding :o"});
+            if (findFriendIndex(user.friends, userAddingId) !== -1) return rej({message: "User is already ur friend ;)"});
+            console.log("\t\tPushing request");
+            user.friendRequests[userAddingId] = {
+              id: userAddingId,
+              firstName: userAdding.name.givenName,
+              lastName: userAdding.name.familyName
+            };
+            user.markModified('friendRequests');
+            console.log("\t\tSaving user ", user);
+            user.save(function(err) {
+              console.log("\t\tSAVED");
+              if (err) return rej({message: "Error saving user"});
+              else return res();
+            });
+
+          }, function(err) {
+            return rej(err);
+          });
+
+        })
+      );
+     
+  };
+  
+  exports.removeRequest = function(userToRemove, userId) {
+
+    return (
+        new Promise(function(res, rej) {
+
+          lookupUser(userId).then(function(user) {
+            
+            if (!user.friendRequests.hasOwnProperty(userToRemove)) return rej({message: "No request from the user :/"});
+
+            delete user.friendRequests[userToRemove];
+            user.markModified('friendRequests');
+
+            user.save(function(err) {
+              if (err) return rej({message: "Error saving user"});
+              else return res();
+            });
+
+          }, function(err) {
+            return rej(err);
+          });
+
+        })
+      );
+    
+    };
 
   
   

@@ -18,18 +18,20 @@ router.post('/addRequest', verifyAuth, function(req, res) {
   if (req.body.friendId === req.user.name.givenName) {
     res.status(400).json({message: "U can't add urself :o"});
   } else {
-    userService.addRequest(req.body.friendId, req.user, function(err) {
-      if (err) res.status(501).json(err);
-      else res.sendStatus(200);
-    });
+    userService.addRequest(req.body.friendId, req.user).then(function(msg) {
+    res.sendStatus(200);
+  }, function(err) {
+    res.status(501).json(err);
+  });
   }
 });
 
 router.post('/removeRequest', verifyAuth, function(req, res) {
 
-  userService.removeRequest(req.body.friendId, req.user.id, function(err) {
-    if (err) res.status(501).json(err);
-    else res.sendStatus(200);
+  userService.removeRequest(req.body.friendId, req.user.id).then(function(msg) {
+    res.sendStatus(200);
+  }, function(err) {
+    res.status(501).json(err);
   });
 
 });
