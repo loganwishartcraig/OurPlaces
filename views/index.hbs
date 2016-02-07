@@ -8,10 +8,47 @@
   <meta charset="utf-8">
 
   <link rel="stylesheet" href="http://localhost:3000/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=PT+Sans+Narrow:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/landing.css" type="text/css">
+<!--   <script src="https://use.typekit.net/xed2xmk.js"></script>
+<script>try{Typekit.load({ async: true });}catch(e){}</script> -->
   <style>
 
-    
+    html, body, .full--height {
+      height: 100%;
+      overflow: auto;
+    }
 
+    h1, h2, h3, a, p, span{
+      font-family: 'PT Sans Narrow', sans-serif;
+      color: #333;
+    }
+
+    a {
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 400;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 400;
+    }
+
+    p {
+      margin: 0;
+      font-size: .95rem;
+    }
+
+    .main--container {
+      max-width: 1070px;
+      margin: 0 auto;
+    }
   </style>
 
 </head>
@@ -19,8 +56,20 @@
 
 <body>
   
-  <h1>Share ur spots</h1>
-  <a href="auth/google"><h2>Login</h2></a> 
+  <div class="page--wrapper full--height">
+  <div class="main--container container--2--1 center--content full--height">
+    <div class="places--container br--pink">
+      <h1 class="places--header header--emphasis">OurPlaces</h1>
+    </div>
+    <div class="welcome--container">
+      <h2 class="welcome--header">Share Your Spots</h2>
+      <p class="welcome--copy txt--algn--lft">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+      <a class="welcome--login--btn" href="auth/google">LOGIN</a> 
+    </div>
+  </div>
+</div>
+
+
   <script src="http://localhost:3000/js/jquery-2.2.0.js"></script>
 </body>
 

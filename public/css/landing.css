@@ -1,0 +1,59 @@
+/* landing page */
+
+/* layout */
+
+.container--2--1 {
+  display: flex;
+  align-items: center;
+}
+
+.container--2--1 > div {
+  width: 50%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* components */
+
+.places--header {
+  color: #3a2646;
+  letter-spacing: .2rem;
+}
+
+.welcome--copy {
+  width: 90%;
+  margin: 1.75rem 0;
+  float: right;
+}
+
+.welcome--login--btn {
+  display: inline-block;
+  background: #f0ddfb;
+  font-size: .8rem;
+  letter-spacing: .2rem;
+  padding: .5rem 1.5rem;
+}
+
+.welcome--login--btn:hover {
+  background: #E6C2FB;
+}
+
+/* effect & utility */
+
+.br--pink {
+  border-right: 1px solid #f0ddfb;
+}
+
+.center--content {
+  text-align: center;
+}
+
+.txt--algn--lft {
+  text-align: left;
+}
+
+.header--emphasis {
+  display: inline-block;
+  padding: .5rem 0;
+  border-bottom: 1px solid #f0ddfb;
+}

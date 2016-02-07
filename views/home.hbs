@@ -1,50 +1,204 @@
 <!doctype html>
-
 <html>
 
 <head>
-
   <title>:33</title>
   <meta charset="utf-8">
-
-  <link rel="stylesheet" href="/css/normalize.css">
+  <link rel="stylesheet" href="http://localhost:3000/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=PT+Sans+Narrow:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/home.css" type="text/css">
   <style>
-
-    
-
+  html,
+  body,
+  .full--height {
+    height: 100%;
+    overflow: auto;
+  }
+  
+  h1,
+  h2,
+  h3,
+  a,
+  p,
+  span,
+  button {
+    font-family: 'PT Sans Narrow', sans-serif;
+    color: #333;
+  }
+  
+  a {
+    text-decoration: none;
+    font-weight: 700;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 400;
+  }
+  
+  h2 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 400;
+  }
+  
+  p {
+    margin: 0;
+    font-size: .95rem;
+  }
+  
+  .main--container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .main--nav {
+    width: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #fffff0;
+    box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.75);
+    position: relative;
+    z-index: 5;
+  }
+  
+  .control--header {
+    display: inline-block;
+    font-size: 1.35rem;
+    font-weight: 700;
+    padding-top: 1rem;
+    padding-bottom: .5rem;
+  }
+  
+  .center--content {
+    text-align: center;
+  }
+  
+  button {
+    padding: 0;
+    margin: 0;
+    outline: 0;
+    font-size: 1rem;
+    border: 0;
+    background: none;
+  }
+  
+  .filter--ctrls {
+    border-top: 1px solid #f0ddfb;
+    border-bottom: 1px solid #f0ddfb;
+    text-align: left;
+  }
+  
+  .filter--ctrls > li {
+    border-bottom: 1px solid #f7effc;
+  }
+  
+  .filter--ctrls > li:last-child {
+    border-bottom: 0;
+  }
+  
+  .filter--btn {
+    display: block;
+    height: 100%;
+    padding: .95rem 0;
+    padding-left: .35rem;
+  }
+  
+  .filter--btn.active {
+    border-left: 5px solid #d998fe;
+  }
+  
+  .filter--btn.inactive {
+    border-left: 5px solid #cecdcd;
+  }
+  
+  .map--area {
+    flex-grow: 1;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+  }
   </style>
-
 </head>
 
-
 <body>
-  
-  <h1>mayde itttt</h1>
-  <p>ur <i><span id="firstName">{{user.firstName}}</span></i></p>
-  <p>ur friends are</p>
-  <ul id="friendList">
-  {{#each user.friends}}
-    <li class="friend--item">{{this.firstName}} {{this.lastName}} <button type="button" action="DELETE" value="{{this.userId}}">Remove :(</button></li>
-  {{/each}}
-  </ul>
-  <p>u have requests from these guyz</p>
-  <ul id="friendRequests">
-  {{#each user.friendRequests}}
-    <li class="request--item"><strong>{{this.firstName}}</strong> wants to add ya.<br>
-    <button type="button" value="{{this.id}}" action="ACCEPT">Accept</button>
-    <button type="button" value="{{this.id}}" action="DECLINE">Decline</button></li>
-  {{/each}}
-  </ul>
-
-  <br>
-  <form action="/user/addRequest" method="post">
-  <label>Add</label>
-  <input type="text" id="friendToAdd" name="friendId" placeholder="Add">
-  <button type="submit" id="addFriend" action="SEND">Add</button>
-  </form>
-
+  <div style="display: none;">
+    <ul id="friendList">
+      {{#each user.friends}}
+      <li class="friend--item">{{this.firstName}} {{this.lastName}}
+        <button type="button" action="DELETE" value="{{this.userId}}">Remove :(</button>
+      </li>
+      {{/each}}
+    </ul>
+    <p>u have requests from these guyz</p>
+    <ul id="friendRequests">
+      {{#each user.friendRequests}}
+      <li class="request--item"><strong>{{this.firstName}}</strong> wants to add ya.
+        <br>
+        <button type="button" value="{{this.id}}" action="ACCEPT">Accept</button>
+        <button type="button" value="{{this.id}}" action="DECLINE">Decline</button>
+      </li>
+      {{/each}}
+    </ul>
+    <br>
+    <form action="/user/addRequest" method="post">
+      <label>Add</label>
+      <input type="text" id="friendToAdd" name="friendId" placeholder="Add">
+      <button type="submit" id="addFriend" action="SEND">Add</button>
+    </form>
+    <input type="text" id="placeSearchString">
+    <button type="submit" id="placeSearchSubmit">Search</button>
+  </div>
+  <div class="page--wrapper full--height">
+    <!-- <p>ur <i><span id="firstName">{{user.firstName}}</span></i></p> -->
+    <div class="main--container full--height">
+      <div class="main--nav full--height center--content">
+        <div class="filters--container">
+          <span class="control--header">Show Me</span>
+          <ul id="filterContainer" class="filter--ctrls">
+            <li class="filter--ctrl">
+              <button class="filter--btn active">My Places</button>
+            </li>
+            <li>
+              <button class="filter--btn inactive">Everyones Places</button>
+            </li>
+          </ul>
+        </div>
+        <div class="request--contianer">
+          <span>Add Friend</span>
+          <button>+</button>
+        </div>
+        <div class="account--container">
+          <span>{{user.firstName}}</span>
+          <div class="noti--container">
+            <span>you hav {{user.requestCount}} many requestz</span>
+          </div>
+          <div class="settings--container"></div>
+        </div>
+      </div>
+      <div id="map" class="map--area">
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9eJ1ddUa7R5OV1lXGrJ81j18-BTy0Z5I&libraries=places"></script>
   <script src="/js/jquery-2.2.0.js"></script>
   <script src="/js/bundle.js"></script>
+  <script>
+  function initMap() {
+    // Create a map object and specify the DOM element for display.
+    var map = new google.maps.Map(document.getElementById('map'), {
+      center: {
+        lat: 34.05,
+        lng: -118.25
+      },
+      scrollwheel: false,
+      zoom: 12
+    });
+
+  }
+  initMap();
+  </script>
 </body>
 
 </html>

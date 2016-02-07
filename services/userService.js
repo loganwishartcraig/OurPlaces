@@ -12,11 +12,12 @@ function serealizeUserResult(userRecord) {
   toReturn.ownedPlaces = userRecord.ownedPlaces;
   toReturn.friendsPlaces = userRecord.friendsPlaces;
   toReturn.friendRequests = userRecord.friendRequests;
+  toReturn.requestCount = userRecord.requestCount;
   return toReturn;
 
-}
+} 
 
-
+//REFACTOR W/ GETUSER
 exports.findOrCreate = function(userToAdd, next) {
 
   console.log("finding user");
@@ -52,6 +53,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
   });
 
+  //REFACTOR W/ GETUSER
   exports.getInfo = function(userId, next) {
 
     User.findOne({
@@ -72,7 +74,7 @@ exports.findOrCreate = function(userToAdd, next) {
   
   // expects google 'user' object layout for 'userAdding'
  
-
+// change {userId: userId} => 'query' object & update accordingly
     function lookupUser(userId) {
 
       return (new Promise(function(res, rej) {
@@ -82,34 +84,14 @@ exports.findOrCreate = function(userToAdd, next) {
             .exec(function(err, user) {
               if (err) return rej({message: "DB error looking up user"});
               if (!user) return rej({message: "User not found"});
-              console.log("Found User")
+              console.log("Found User");
               return res(user);
             });
 
       }));
 
     }
-  
-//   function lookupTwo(firstUserId, secondUserId) {
-    
-//     return (new Promise(function(res, rej) {
-//                 console.log("\tretrieving users...", firstUserId, secondUserId);
 
-//         lookupUser(firstUserId).then(function(userOne) {
-//           console.log("\tlooking up first user")
-//           lookupUser(secondUserId).then(function(userTwo) {
-//             console.log("\tlooking up second user")
-//             return res([userOne, userTwo]);
-            
-//           }, function(err) {
-//             return rej(err);
-//           });
-//         }, function(err) {
-//           return rej(err);
-//         })
-//       })
-//     )
-//   }
 
     function findFriendIndex(friendList, friendId) {
 
@@ -138,6 +120,7 @@ exports.findOrCreate = function(userToAdd, next) {
               lastName: userAdding.name.familyName
             };
             user.markModified('friendRequests');
+            user.requestCount++;
             console.log("\t\tSaving user ", user);
             user.save(function(err) {
               console.log("\t\tSAVED");
@@ -165,6 +148,8 @@ exports.findOrCreate = function(userToAdd, next) {
 
             delete user.friendRequests[userToRemove];
             user.markModified('friendRequests');
+
+            user.requestCount--;
 
             user.save(function(err) {
               if (err) return rej({message: "Error saving user"});

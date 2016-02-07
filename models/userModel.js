@@ -8,6 +8,7 @@ module.exports = mongoose.model('User', new Schema({
   lastName: String,
   friends: [{type: Schema.ObjectId, ref: 'User'}],
   friendRequests: {type: Schema.Types.Mixed, default: {}},
+  requestCount: {type: Number, default: 0},
   ownedPlaces: {type: Array, default: []},
   friendsPlaces: {type: Array, default: []},
   dateCreated: {type: Date, default: Date.now}
