@@ -53,7 +53,7 @@
   }
   
   .main--nav {
-    width: 110px;
+    width: 130px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -102,15 +102,21 @@
     display: block;
     height: 100%;
     padding: .95rem 0;
-    padding-left: .35rem;
+    padding-right: .35rem;
+    width:100%;
+    text-align: right;
   }
   
   .filter--btn.active {
-    border-left: 5px solid #d998fe;
+    border-right: 8px solid #d998fe;
   }
   
   .filter--btn.inactive {
-    border-left: 5px solid #cecdcd;
+    border-right: 8px solid #cecdcd;
+  }
+  
+  .pos--rel {
+    position: relative;
   }
   
   .map--area {
@@ -119,11 +125,77 @@
     position: relative;
     z-index: 1;
   }
+
+  .map {
+    height: 100%;
+    width: 100%;
+  }
+
+
+  .search--input {
+    padding: .5rem .75rem;
+    width: 30%;
+    min-width: 200px;
+    max-width: 600px;
+    box-sizing: border-box;
+    box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
+    border: 1px solid #828181;
+  }
+  
+  .search--btn {
+    display: inline-block;
+    background: #f0ddfb;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .2rem;
+    padding: .5rem 1.5rem;
+    box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
+    border: 1px solid #8A7B92;
+  }
+
+  .controls--container {
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .mail--container {
+    padding: 1rem 0 2rem 0;
+  }
+
+  .mail--txt, .mail--img {
+    vertical-align: middle;
+  }
+
+  .mail--img {
+    width: 25%;
+    height: auto;
+    display: inline-block;
+    padding-right: .5rem;
+  }
+  
+  .mail--txt {
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: inline-block;
+    padding-left: .5rem;
+  }
+
+  .mail--txt.active {
+    color: #ff4444;
+  }
+
+  .mail--txt.inactive {
+    color: #cccbcb;
+  }
+
   </style>
 </head>
 
 <body>
-  <div style="display: none;">
+  <!-- <div style="display: none;">
     <ul id="friendList">
       {{#each user.friends}}
       <li class="friend--item">{{this.firstName}} {{this.lastName}}
@@ -147,15 +219,13 @@
       <input type="text" id="friendToAdd" name="friendId" placeholder="Add">
       <button type="submit" id="addFriend" action="SEND">Add</button>
     </form>
-    <input type="text" id="placeSearchString">
     <button type="submit" id="placeSearchSubmit">Search</button>
-  </div>
-  <div class="page--wrapper full--height">
-    <!-- <p>ur <i><span id="firstName">{{user.firstName}}</span></i></p> -->
+  </div> -->
+  <div class="page--wrapper full--height pos--rel" style="">
     <div class="main--container full--height">
       <div class="main--nav full--height center--content">
         <div class="filters--container">
-          <span class="control--header">Show Me</span>
+          <span class="control--header">OurPlaces</span>
           <ul id="filterContainer" class="filter--ctrls">
             <li class="filter--ctrl">
               <button class="filter--btn active">My Places</button>
@@ -171,13 +241,25 @@
         </div>
         <div class="account--container">
           <span>{{user.firstName}}</span>
-          <div class="noti--container">
-            <span>you hav {{user.requestCount}} many requestz</span>
+          <div class="mail--container">
+            {{#if user.requestCount}}
+            <img class="mail--img active" src="/images/mail--active.png">
+            <span class="mail--txt active">{{user.requestCount}}</span> 
+            {{else}}
+            <img class="mail--img inactive" src="/images/mail--inactive.png">
+            <span class="mail--txt inactive">0</span> 
+            {{/if}}
           </div>
           <div class="settings--container"></div>
         </div>
       </div>
-      <div id="map" class="map--area">
+      <div class="map--area">
+        <div class="controls--container">
+          <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
+          <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
+        </div>
+        <div id="map" class="map">
+        </div>
       </div>
     </div>
   </div>
@@ -185,19 +267,55 @@
   <script src="/js/jquery-2.2.0.js"></script>
   <script src="/js/bundle.js"></script>
   <script>
-  function initMap() {
-    // Create a map object and specify the DOM element for display.
-    var map = new google.maps.Map(document.getElementById('map'), {
-      center: {
-        lat: 34.05,
-        lng: -118.25
-      },
-      scrollwheel: false,
-      zoom: 12
-    });
+function execSearch(map, request, service) {
 
-  }
-  initMap();
+  service.nearbySearch(request, function(results, status) {
+    console.log(results, status);
+    if (status == google.maps.places.PlacesServiceStatus.OK) {
+      for (var i = 0; i < results.length; i++) {
+        var place = results[i];
+        // If the request succeeds, draw the place location on
+        // the map as a marker, and register an event to handle a
+        // click on the marker.
+        var marker = new google.maps.Marker({
+          map: map,
+          position: place.geometry.location
+        });
+      }
+    }
+  });
+
+}
+
+function initialize() {
+  var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
+
+  var map = new google.maps.Map(document.getElementById('map'), {
+    center: pyrmont,
+    zoom: 15,
+    scrollwheel: true,
+    disableDefaultUI: true
+  });
+
+  // Specify location, radius and place types for your Places API search.
+  var request = {
+    location: pyrmont,
+    radius: '500',
+    types: ['store']
+  };
+
+  // Create the PlaceService and send the request.
+  // Handle the callback with an anonymous function.
+  var service = new google.maps.places.PlacesService(map);
+  document.getElementById('placesSearchSubmit').addEventListener('click', function(e) {
+      request.query = document.getElementById('placeSearchInput').value;
+      execSearch(map, request, service);
+  });
+
+}
+
+// Run the initialize function when the window has finished loading.
+google.maps.event.addDomListener(window, 'load', initialize);
   </script>
 </body>
 
