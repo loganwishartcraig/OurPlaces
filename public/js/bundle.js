@@ -48,89 +48,75 @@
 
 	$(document).ready(function () {
 
-	  function removeRequest(elm, request) {
-	    document.getElementById(elm).removeChild(request);
+	  // register variables for global access
+	  var map;
+	  var placeService;
+	  var infoWindow;
+
+	  function initialize() {
+
+	    // set starting point for map
+	    var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
+
+	    // create new map on global variable
+	    map = new google.maps.Map(document.getElementById('map'), {
+	      center: pyrmont,
+	      zoom: 15,
+	      scrollwheel: true,
+	      disableDefaultUI: true
+	    });
+
+	    // Create the PlaceService and send the request.
+	    placeService = new google.maps.places.PlacesService(map);
+
+	    // register global event handlers
+	    registerHandlers();
 	  }
 
-	  // abstract post into promise
+	  // function for builidng nearby search requests;
+	  function buildSearchRequest() {
 
-	  function handleRequestAction(e) {
-	    if (e.target.tagName === 'BUTTON') {
-	      switch (e.target.getAttribute('action')) {
-	        case 'ACCEPT':
-	          console.log('accpeting request');
-	          $.post('/user/acceptRequest', {
-	            friendId: e.target.getAttribute('value')
-	          }).success(function (msg) {
-	            console.log(msg);
-	            removeRequest('friendRequests', e.target.parentElement);
-	          }).error(function (err) {
-	            console.log(err);
-	          });
-	          break;
-	        case 'DECLINE':
-	          $.post('/user/removeRequest', {
-	            friendId: e.target.getAttribute('value')
-	          }).success(function (msg) {
-	            console.log(msg);
-	            removeRequest('friendRequests', e.target.parentElement);
-	          }).error(function (err) {
-	            console.log(err);
-	          });
-	          break;
-	        default:
-	          console.log('action not found...');
-	          break;
+	    return {
+	      location: new google.maps.LatLng(-33.8665, 151.1956),
+	      radius: '500',
+	      keyword: $('#placeSearchInput').val()
+	    };
+	  }
+
+	  function placeMarker(place) {
+	    var marker = new google.maps.Marker({
+	      map: map,
+	      position: place.geometry.location
+	    });
+	  }
+
+	  // handles response for nearby search
+	  function searchCallback(res, status) {
+	    console.log(res, status);
+	    // proceed only if succeeded
+	    if (status == google.maps.places.PlacesServiceStatus.OK) {
+	      // make a marker for each result
+	      for (var i = 0; i < res.length; i++) {
+	        placeMarker(res[i]);
 	      }
 	    }
 	  }
 
-	  function handleFriendAction(e) {
-
-	    if (e.target.tagName === 'BUTTON') {
-	      switch (e.target.getAttribute('action')) {
-	        case 'DELETE':
-	          $.post('/user/removeFriend', {
-	            friendId: e.target.getAttribute('value')
-	          }).success(function (msg) {
-	            console.log(msg);
-	          }).error(function (err) {
-	            console.log(err);
-	          });
-	          break;
-	        default:
-	          console.log('action not found...');
-	          break;
-	      }
-	    }
+	  // function to execute the search
+	  function execNearbySearch() {
+	    var request = buildSearchRequest();
+	    placeService.nearbySearch(request, searchCallback);
 	  }
 
-	  function handleAddFriendAction(e) {
-	    e.preventDefault();
-
-	    var friendName = document.getElementById('friendToAdd').value;
-
-	    if (e.target.tagName === 'BUTTON') {
-	      switch (e.target.getAttribute('action')) {
-	        case 'SEND':
-	          $.post('/user/addRequest', {
-	            friendId: friendName
-	          }).success(function (msg) {
-	            console.log(msg);
-	          }).error(function (err) {
-	            console.log(err);
-	          });
-	          break;
-	        default:
-	          console.log('action not found...');
-	          break;
-	      }
-	    }
+	  // registers global event handlers
+	  function registerHandlers() {
+	    // search submit button => excecute search
+	    document.getElementById('placesSearchSubmit').addEventListener('click', execNearbySearch);
 	  }
 
-	  document.getElementById('friendRequests').addEventListener('click', handleRequestAction);
-	  document.getElementById('friendList').addEventListener('click', handleFriendAction);
-	  document.getElementById('addFriend').addEventListener('click', handleAddFriendAction);
+	  // Run the initialize function when the window has finished loading.
+	  // google.maps.event.addDomListener(window, 'load', initialize);
+	  initialize();
 	});
 
 /***/ }

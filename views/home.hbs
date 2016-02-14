@@ -131,12 +131,17 @@
     width: 100%;
   }
 
-
-  .search--input {
-    padding: .5rem .75rem;
+  .search--container {
+    display: inline-block;
+    vertical-align: top;
     width: 30%;
     min-width: 200px;
     max-width: 600px;
+  }
+
+  .search--input {
+    padding: .5rem .75rem;
+    width: 100%;
     box-sizing: border-box;
     box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
     border: 1px solid #828181;
@@ -151,6 +156,23 @@
     padding: .5rem 1.5rem;
     box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
     border: 1px solid #8A7B92;
+  }
+
+  .predictive--results > li {
+    padding: .3rem .5rem;
+    border: 1px solid grey;
+    border-top: 0;
+    font-size: .9rem;
+    color: #fffff0;
+    background: rgba(0, 0, 0, .625);
+    box-sizing: border-box;
+  }
+
+  .predictive--results > li:hover {
+    font-weight: 700;
+    color: #333;
+    background: #f0ddfb;
+    font-size: .85rem;
   }
 
   .controls--container {
@@ -190,37 +212,159 @@
   .mail--txt.inactive {
     color: #cccbcb;
   }
-
+@-webkit-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-moz-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-ms-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-moz-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-o-keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+.uil-ring-css {
+  background: none;
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+.uil-ring-css > div {
+  position: absolute;
+  display: block;
+  width: 160px;
+  height: 160px;
+  top: 20px;
+  left: 20px;
+  border-radius: 80px;
+  box-shadow: 0 6px 0 0 #f0ddfb;
+  -ms-animation: uil-ring-anim 1.25s linear infinite;
+  -moz-animation: uil-ring-anim 1.25s linear infinite;
+  -webkit-animation: uil-ring-anim 1.25s linear infinite;
+  -o-animation: uil-ring-anim 1.25s linear infinite;
+  animation: uil-ring-anim 1.25s linear infinite;
+}
   </style>
 </head>
 
 <body>
-  <!-- <div style="display: none;">
-    <ul id="friendList">
-      {{#each user.friends}}
-      <li class="friend--item">{{this.firstName}} {{this.lastName}}
-        <button type="button" action="DELETE" value="{{this.userId}}">Remove :(</button>
-      </li>
-      {{/each}}
-    </ul>
-    <p>u have requests from these guyz</p>
-    <ul id="friendRequests">
-      {{#each user.friendRequests}}
-      <li class="request--item"><strong>{{this.firstName}}</strong> wants to add ya.
-        <br>
-        <button type="button" value="{{this.id}}" action="ACCEPT">Accept</button>
-        <button type="button" value="{{this.id}}" action="DECLINE">Decline</button>
-      </li>
-      {{/each}}
-    </ul>
-    <br>
-    <form action="/user/addRequest" method="post">
-      <label>Add</label>
-      <input type="text" id="friendToAdd" name="friendId" placeholder="Add">
-      <button type="submit" id="addFriend" action="SEND">Add</button>
-    </form>
-    <button type="submit" id="placeSearchSubmit">Search</button>
-  </div> -->
   <div class="page--wrapper full--height pos--rel" style="">
     <div class="main--container full--height">
       <div class="main--nav full--height center--content">
@@ -255,7 +399,13 @@
       </div>
       <div class="map--area">
         <div class="controls--container">
+          <div class="search--container">
           <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
+          <ul class="predictive--results">
+            <li><div class='uil-ring-css' style='transform:scale(0.6);'><div></div></div></li>
+            <li>result 1</li>
+            <li>result 2</li>
+          </ul></div>
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>
         <div id="map" class="map">
@@ -266,57 +416,6 @@
   <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9eJ1ddUa7R5OV1lXGrJ81j18-BTy0Z5I&libraries=places"></script>
   <script src="/js/jquery-2.2.0.js"></script>
   <script src="/js/bundle.js"></script>
-  <script>
-function execSearch(map, request, service) {
-
-  service.nearbySearch(request, function(results, status) {
-    console.log(results, status);
-    if (status == google.maps.places.PlacesServiceStatus.OK) {
-      for (var i = 0; i < results.length; i++) {
-        var place = results[i];
-        // If the request succeeds, draw the place location on
-        // the map as a marker, and register an event to handle a
-        // click on the marker.
-        var marker = new google.maps.Marker({
-          map: map,
-          position: place.geometry.location
-        });
-      }
-    }
-  });
-
-}
-
-function initialize() {
-  var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
-
-  var map = new google.maps.Map(document.getElementById('map'), {
-    center: pyrmont,
-    zoom: 15,
-    scrollwheel: true,
-    disableDefaultUI: true
-  });
-
-  // Specify location, radius and place types for your Places API search.
-  var request = {
-    location: pyrmont,
-    radius: '500',
-    types: ['store']
-  };
-
-  // Create the PlaceService and send the request.
-  // Handle the callback with an anonymous function.
-  var service = new google.maps.places.PlacesService(map);
-  document.getElementById('placesSearchSubmit').addEventListener('click', function(e) {
-      request.query = document.getElementById('placeSearchInput').value;
-      execSearch(map, request, service);
-  });
-
-}
-
-// Run the initialize function when the window has finished loading.
-google.maps.event.addDomListener(window, 'load', initialize);
-  </script>
 </body>
 
 </html>
