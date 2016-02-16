@@ -158,6 +158,11 @@
     border: 1px solid #8A7B92;
   }
 
+  .predictive--results {
+    max-height: 13.5rem;
+    overflow-y: auto;
+  }
+
   .predictive--results > li {
     padding: .3rem .5rem;
     border: 1px solid grey;
@@ -173,6 +178,13 @@
     color: #333;
     background: #f0ddfb;
     font-size: .85rem;
+  }
+
+  .predictive--results > li:first-child:hover {
+    font-weight: 400;
+    font-size: .9rem;
+    color: #fffff0;
+    background:  rgba(0, 0, 0, .625);;
   }
 
   .controls--container {
@@ -212,6 +224,12 @@
   .mail--txt.inactive {
     color: #cccbcb;
   }
+
+  .hide {
+    display: none;
+  }
+
+
 @-webkit-keyframes uil-ring-anim {
   0% {
     -ms-transform: rotate(0deg);
@@ -343,18 +361,18 @@
 .uil-ring-css {
   background: none;
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 20%;
+  height: 20%;
+  margin: 0 auto;
+  padding: .1rem 0;
 }
 .uil-ring-css > div {
-  position: absolute;
   display: block;
-  width: 160px;
-  height: 160px;
-  top: 20px;
-  left: 20px;
+  width: 1rem;
+  height: 1rem;
+  margin: 0 auto;
   border-radius: 80px;
-  box-shadow: 0 6px 0 0 #f0ddfb;
+  box-shadow: 0 2px 0 0 #f0ddfb;
   -ms-animation: uil-ring-anim 1.25s linear infinite;
   -moz-animation: uil-ring-anim 1.25s linear infinite;
   -webkit-animation: uil-ring-anim 1.25s linear infinite;
@@ -401,10 +419,8 @@
         <div class="controls--container">
           <div class="search--container">
           <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
-          <ul class="predictive--results">
-            <li><div class='uil-ring-css' style='transform:scale(0.6);'><div></div></div></li>
-            <li>result 1</li>
-            <li>result 2</li>
+          <ul id="predictiveContainer" class="predictive--results">
+            <li class="prefetch--load--img hide"><div class='uil-ring-css'><div></div></div></li>
           </ul></div>
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>

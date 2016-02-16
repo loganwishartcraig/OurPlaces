@@ -6,6 +6,9 @@ module.exports = {
   },
   module: {
     loaders: [{
+      test: /\.scss$/,
+      loaders: ["style", "css", "sass"]
+    }, {
       test: /\.js$/,
       exclude: /node_modules/,
       loader: "babel-loader",
@@ -14,5 +17,8 @@ module.exports = {
         presets: ['es2015'],
       }
     }]
+  },
+  sassLoader: {
+    includePaths: [__dirname + "./src/scss"]
   }
 };
