@@ -44,149 +44,162 @@
 /* 0 */
 /***/ function(module, exports) {
 
-	'use strict';
+	"use strict";
 
 	$(document).ready(function () {
 
-	    // register variables for global access
-	    var map;
-	    var placeService;
-	    var infoWindow;
-	    var searchTextBox;
+	  // register variables for global access
+	  var map;
+	  var placeService;
+	  var infoWindow;
+	  var searchTextBox;
+	  var prefetchResults;
 
-	    function initialize() {
+	  function initialize() {
 
-	        // set starting point for map
-	        var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
+	    // set starting point for map
+	    var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
 
-	        // create new map on global variable
-	        map = new google.maps.Map(document.getElementById('map'), {
-	            center: pyrmont,
-	            zoom: 15,
-	            scrollwheel: true,
-	            disableDefaultUI: true
-	        });
+	    // create new map on global variable
+	    map = new google.maps.Map(document.getElementById('map'), {
+	      center: pyrmont,
+	      zoom: 15,
+	      scrollwheel: true,
+	      disableDefaultUI: true
+	    });
 
-	        // Create the PlaceService and send the request.
-	        placeService = new google.maps.places.PlacesService(map);
+	    // Create the PlaceService and send the request.
+	    placeService = new google.maps.places.PlacesService(map);
 
-	        searchTextBox = new TextBox("#placeSearchInput");
+	    searchTextBox = new TextBox("#placeSearchInput");
+	    prefetchResults = new PrefetchResults("#predictiveContainer");
 
-	        // register global event handlers
-	        registerHandlers();
+	    // register global event handlers
+	    registerHandlers();
+	  }
+
+	  // function for builidng nearby search requests;
+	  function buildSearchRequest(text) {
+
+	    return {
+	      location: new google.maps.LatLng(-33.8665, 151.1956),
+	      radius: '500',
+	      keyword: text
+	    };
+	  }
+
+	  function placeMarker(place) {
+	    var marker = new google.maps.Marker({
+	      map: map,
+	      position: place.geometry.location
+	    });
+	    console.log(marker);
+	  }
+
+	  // handles response for nearby search
+	  function plotPlaces(res, status) {
+	    console.log(res, status);
+	    // proceed only if succeeded
+	    if (status == google.maps.places.PlacesServiceStatus.OK) {
+	      // make a marker for each result
+	      for (var i = 0; i < res.length; i++) {
+	        placeMarker(res[i]);
+	      }
 	    }
+	  }
 
-	    // function for builidng nearby search requests;
-	    function buildSearchRequest() {
+	  // binds a function tree for text boxes (class?) to an element
+	  function TextBox(selector) {
+	    var _this = this;
 
-	        return {
-	            location: new google.maps.LatLng(-33.8665, 151.1956),
-	            radius: '500',
-	            keyword: $('#placeSearchInput').val()
-	        };
-	    }
+	    this.textArea = $(selector);
 
-	    function placeMarker(place) {
-	        var marker = new google.maps.Marker({
-	            map: map,
-	            position: place.geometry.location
-	        });
-	        console.log(marker);
-	    }
+	    this.getInput = function () {
+	      return _this.textArea.val();
+	    };
+	    this.isEmpty = function () {
+	      return _this.textArea.val() === '';
+	    };
+	    this.length = function () {
+	      return _this.textArea.val().length;
+	    };
+	  }
 
-	    // handles response for nearby search
-	    function plotPlaces(res, status) {
-	        console.log(res, status);
-	        // proceed only if succeeded
-	        if (status == google.maps.places.PlacesServiceStatus.OK) {
-	            // make a marker for each result
-	            for (var i = 0; i < res.length; i++) {
-	                placeMarker(res[i]);
-	            }
-	        }
-	    }
+	  // function to execute the search
+	  function execNearbySearch() {
+	    var request = buildSearchRequest();
+	    placeService.nearbySearch(request, plotPlaces);
+	  }
 
-	    // binds a function tree for text boxes (class?) to an element
-	    function TextBox(selector) {
-	        var _this = this;
+	  function PrefetchResults(selector) {
+	    this.resultContainer = $(selector);
+	    this.loading = false;
 
-	        this.textArea = $(selector);
+	    this.set = function (resultList) {
+	      console.log("setting");
 
-	        this.getInput = function () {
-	            return _this.textArea.val();
-	        };
-	        this.isEmpty = function () {
-	            return _this.textArea.val() === '';
-	        };
-	        this.length = function () {
-	            return _this.textArea.val().length;
-	        };
-	    }
-
-	    // function to execute the search
-	    function execNearbySearch() {
-	        var request = buildSearchRequest();
-	        placeService.nearbySearch(request, plotPlaces);
-	    }
-
-	    function setResultsList(selector, resultList) {
-	        var resultContainer = $(selector);
-	        resultContainer.children().not('li:first').remove();
-	        resultContainer.children('li:first').addClass('hide');
-
+	      // %%%%%%%%%%%%%%%%%
+	      if (resultList.length !== 0) {
 	        resultList.forEach(function (item, index) {
-	            var toAdd = $("<li></li>");
-	            toAdd.text(item);
-	            console.log("adding", toAdd);
-	            resultContainer.append(toAdd);
-	        });
-	    }
+	          var toAdd = $("<li></li>");
+	          console.log(item);
+	          toAdd.text(item.name);
+	          console.log("adding", toAdd);
+	          this.resultContainer.append(toAdd);
+	        }.bind(this));
+	      } else {
+	        var toAdd = $("<li></li>");
+	        toAdd.text("No Results :/");
+	        console.log("adding", toAdd);
+	        this.resultContainer.append(toAdd);
+	      }
+	      // %%%%%%%%%%%%%%%%%
+	    };
 
-	    function populateResultNames(res, status) {
-	        console.log(res, status);
-	        // proceed only if succeeded
-	        var resultList = [];
-	        if (status === google.maps.places.PlacesServiceStatus.OK) {
-	            // make a marker for each result
-	            for (var i = 0; i < res.length; i++) {
-	                resultList.push(res[i].name);
-	            }
-	            console.log(resultList);
-	            setResultsList("#predictiveContainer", resultList);
-	        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-	            setResultsList("#predictiveContainer", []);
-	        }
-	    }
+	    this.clear = function () {
+	      console.log("clearing");
+	      this.resultContainer.children().not('li:first').remove();
+	    };
 
-	    function pullSuggestions() {
-	        console.log("pulling");
-	        var request = buildSearchRequest();
-	        placeService.nearbySearch(request, populateResultNames);
-	    }
+	    this.toggleLoading = function () {
+	      console.log("toggling load");
+	      this.resultContainer.children('li:first').toggleClass('hide');
+	      this.loading = !this.loading;
+	    };
 
-	    function handleSearchInput(evt) {
+	    this.fetch = function (searchTerm) {
+	      console.log("pulling");
+	      this.toggleLoading();
+	      var request = buildSearchRequest(searchTerm);
+	      console.log("searching ", request);
+	      placeService.nearbySearch(request, function (data, status) {
+	        console.log("recieved data", status);
+	        this.clear();
+	        this.toggleLoading();
+	        if (status === google.maps.places.PlacesServiceStatus.OK) return this.set(data);
+	        if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) return this.set([]);
+	      }.bind(this));
+	    };
+	  }
 
-	        var loadingImg = $(".prefetch--load--img");
+	  function handleSearchInput(evt) {
 
-	        if (evt.keyCode === 13) return execNearbySearch();
+	    if (evt.keyCode === 13) return execNearbySearch();
 
-	        if (searchTextBox.length() > 3) {
-	            if (searchTextBox.isEmpty() && !loadingImg.hasClass('hide')) loadingImg.toggleClass('hide');
-	            if (!searchTextBox.isEmpty() && loadingImg.hasClass('hide')) loadingImg.toggleClass('hide');
-	            pullSuggestions();
-	        }
-	    }
+	    if (searchTextBox.length() === 0) return prefetchResults.clear();
+	    if (searchTextBox.length() >= 4) return prefetchResults.fetch(searchTextBox.getInput());
+	  }
 
-	    // registers global event handlers
-	    function registerHandlers() {
-	        // search submit button => excecute search
-	        document.getElementById('placesSearchSubmit').addEventListener('click', execNearbySearch);
-	        document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
-	    }
+	  // registers global event handlers
+	  function registerHandlers() {
+	    // search submit button => excecute search
+	    document.getElementById('placesSearchSubmit').addEventListener('click', execNearbySearch);
+	    document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
+	  }
 
-	    // Run the initialize function when the window has finished loading.
-	    // google.maps.event.addDomListener(window, 'load', initialize);
-	    initialize();
+	  // Run the initialize function when the window has finished loading.
+	  // google.maps.event.addDomListener(window, 'load', initialize);
+	  initialize();
 	});
 
 /***/ }
