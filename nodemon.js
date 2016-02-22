@@ -1,4 +1,5 @@
 {
   "verbose": true,
-  "ignore": ["node_modules/**", "public/**", "src/**"]
+  "ignore": ["node_modules/**", "public/**", "src/**"],
+  "watch": ["./services/**", "./app.js", "./models/**"]
 }

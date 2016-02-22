@@ -10,25 +10,62 @@ $(document).ready(function() {
 
   function initialize() {
 
-    // set starting point for map
-    var pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
 
-    // create new map on global variable
-    map = new google.maps.Map(document.getElementById('map'), {
-      center: pyrmont,
-      zoom: 15,
-      scrollwheel: true,
-      disableDefaultUI: true
-    });
-
+    map = new MapArea("map");
     // Create the PlaceService and send the request.
-    placeService = new google.maps.places.PlacesService(map);
-
+    placeService = new google.maps.places.PlacesService(map.map);
     searchTextBox = new TextBox("#placeSearchInput");
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
     // register global event handlers
     registerHandlers();
+
+  }
+
+  function MapArea(ID) {
+
+    this.mapContainer = document.getElementById(ID);
+
+    // set starting point for map
+    this.pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
+
+    // create new map on global variable
+    this.map = new google.maps.Map(this.mapContainer, {
+      center: this.pyrmont,
+      zoom: 15,
+      scrollwheel: true,
+      disableDefaultUI: true
+    });
+
+    this.placeMarker = function(place) {
+      var marker = new google.maps.Marker({
+        map: this.map,
+        position: place.geometry.location
+      });
+      console.log(marker);
+      marker.addListener('click', function() {
+        // infowindow.open(map, marker);
+        console.log("clicked ", marker)
+      });
+    };
+
+    this.plotPlaces = function(res, status) {
+      console.log(res, status);
+      // proceed only if succeeded
+      if (status == google.maps.places.PlacesServiceStatus.OK) {
+        // make a marker for each result
+        for (var i = 0; i < res.length; i++) {
+          this.placeMarker(res[i]);
+        }
+      }
+    }.bind(this);
+
+    this.execNearbySearch = function(searchTerm) {
+      console.log("executing search");
+      var request = buildSearchRequest(searchTerm);
+      placeService.nearbySearch(request, this.plotPlaces);
+    };
+
 
   }
 
@@ -41,28 +78,6 @@ $(document).ready(function() {
       keyword: text
     });
 
-  }
-
-
-
-  function placeMarker(place) {
-    var marker = new google.maps.Marker({
-      map: map,
-      position: place.geometry.location
-    });
-    console.log(marker);
-  }
-
-  // handles response for nearby search
-  function plotPlaces(res, status) {
-    console.log(res, status);
-    // proceed only if succeeded
-    if (status == google.maps.places.PlacesServiceStatus.OK) {
-      // make a marker for each result
-      for (var i = 0; i < res.length; i++) {
-        placeMarker(res[i]);
-      }
-    }
   }
 
 
@@ -81,11 +96,7 @@ $(document).ready(function() {
     }
   }
 
-  // function to execute the search
-  function execNearbySearch() {
-    var request = buildSearchRequest();
-    placeService.nearbySearch(request, plotPlaces);
-  }
+
 
   function PrefetchResults(selector) {
     this.resultContainer = $(selector);
@@ -94,7 +105,7 @@ $(document).ready(function() {
     this.set = function(resultList) {
       console.log("setting");
 
-      // %%%%%%%%%%%%%%%%%
+      // %%%
       if (resultList.length !== 0) {
         resultList.forEach(function(item, index) {
           var toAdd = $("<li></li>");
@@ -109,7 +120,7 @@ $(document).ready(function() {
         console.log("adding", toAdd);
         this.resultContainer.append(toAdd);
       }
-      // %%%%%%%%%%%%%%%%%
+      // %%%
 
     };
 
@@ -144,7 +155,7 @@ $(document).ready(function() {
 
   function handleSearchInput(evt) {
 
-    if (evt.keyCode === 13) return execNearbySearch();
+    if (evt.keyCode === 13) return map.execNearbySearch(searchTextBox.getInput());
 
     if (searchTextBox.length() === 0) return prefetchResults.clear();
     if (searchTextBox.length() >= 4) return prefetchResults.fetch(searchTextBox.getInput());
@@ -157,7 +168,9 @@ $(document).ready(function() {
   // registers global event handlers
   function registerHandlers() {
     // search submit button => excecute search
-    document.getElementById('placesSearchSubmit').addEventListener('click', execNearbySearch);
+    document.getElementById('placesSearchSubmit').addEventListener('click', function() {
+      map.execNearbySearch(searchTextBox.getInput());
+    });
     document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
   }
 
