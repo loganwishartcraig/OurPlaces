@@ -79,17 +79,32 @@
 	      center: this.pyrmont,
 	      zoom: 15,
 	      scrollwheel: true,
-	      disableDefaultUI: true
+	      disableDefaultUI: false,
+	      mapTypeControl: true
+
 	    });
 
-	    this.placeMarker = function (place) {
-	      var marker = new google.maps.Marker({
-	        map: this.map,
-	        position: place.geometry.location
+	    this.generateInfoWindow = function (place) {
+	      var contentString = '<div>' + place.name + '</div>';
+	      return new google.maps.InfoWindow({
+	        content: contentString
 	      });
-	      console.log(marker);
+	    };
+
+	    this.generateMarker = function (place) {
+	      return new google.maps.Marker({
+	        map: this.map,
+	        position: place.geometry.location,
+	        title: place.name
+	      });
+	    };
+
+	    this.placeMarker = function (place) {
+	      var marker = this.generateMarker(place);
+	      var infoWindow = this.generateInfoWindow(place);
+	      console.log(place);
 	      marker.addListener('click', function () {
-	        // infowindow.open(map, marker);
+	        infoWindow.open(this.map, marker);
 	        console.log("clicked ", marker);
 	      });
 	    };
