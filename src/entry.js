@@ -2,7 +2,7 @@ $(document).ready(function() {
 
   // register variables for global access
   var map;
-  var placeService;
+  var searchServices;
   var infoWindow;
   var searchTextBox;
   var prefetchResults;
@@ -12,13 +12,45 @@ $(document).ready(function() {
 
 
     map = new MapArea("map");
-    // Create the PlaceService and send the request.
-    placeService = new google.maps.places.PlacesService(map.map);
+
+    // Create the interface w/ google.
+    searchServices = new SearchServices(map.map);
+
     searchTextBox = new TextBox("#placeSearchInput");
+
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
     // register global event handlers
     registerHandlers();
+
+  }
+
+  function SearchServices(map) {
+
+    console.log(map);
+    this.placeServiceConn = new google.maps.places.PlacesService(map);
+
+    this.buildSearchRequest = function(keyword) {
+
+      return({
+        location: new google.maps.LatLng(-33.8665, 151.1956),
+        radius: '500',
+        keyword: keyword
+      });
+
+    };
+
+
+    this.nearbySearch = function(keyword, cb) {
+      var req = this.buildSearchRequest(keyword);
+      this.placeServiceConn.nearbySearch(req, cb);
+    }.bind(this);
+
+    this.placeDetails = function(placeId, cb) {
+      var req = {placeId: placeId};
+      console.log(req);
+      this.placeServiceConn.getDetails(req, cb);
+    }.bind(this);
 
   }
 
@@ -41,15 +73,15 @@ $(document).ready(function() {
 
     this.generateInfoWindow = function(place) {
       var contentString = '<div>' +
-                          place.name +
-                          '</div>';
-      return(new google.maps.InfoWindow({
+        place.name +
+        '</div>';
+      return (new google.maps.InfoWindow({
         content: contentString
       }));
     };
 
     this.generateMarker = function(place) {
-        return(new google.maps.Marker({
+      return (new google.maps.Marker({
         map: this.map,
         position: place.geometry.location,
         title: place.name
@@ -62,9 +94,9 @@ $(document).ready(function() {
       console.log(place);
       marker.addListener('click', function() {
         infoWindow.open(this.map, marker);
-        console.log("clicked ", marker); 
+        console.log("clicked ", marker);
       });
-    };
+    }.bind(this);
 
     this.plotPlaces = function(res, status) {
       console.log(res, status);
@@ -79,21 +111,12 @@ $(document).ready(function() {
 
     this.execNearbySearch = function(searchTerm) {
       console.log("executing search");
-      var request = buildSearchRequest(searchTerm);
-      placeService.nearbySearch(request, this.plotPlaces);
+      searchServices.nearbySearch(searchTerm, this.plotPlaces);
     };
 
-
-  }
-
-  // function for builidng nearby search requests;
-  function buildSearchRequest(text) {
-
-    return ({
-      location: new google.maps.LatLng(-33.8665, 151.1956),
-      radius: '500',
-      keyword: text
-    });
+    this.execSearchById = function(placeId) {
+      searchServices.placeDetails(placeId, this.placeMarker);
+    };
 
   }
 
@@ -110,7 +133,7 @@ $(document).ready(function() {
     };
     this.length = () => {
       return (this.textArea.val().length);
-    }
+    };
   }
 
 
@@ -119,25 +142,36 @@ $(document).ready(function() {
     this.resultContainer = $(selector);
     this.loading = false;
 
+    this.createListItem = function(item) {
+      item = item || {
+        name: '',
+        place_id: ''
+      };
+      var toAdd = $("<li place_id=" + item.place_id + "></li>");
+      toAdd.text(item.name);
+      $(toAdd).on('click', function() {
+        map.execSearchById(item.place_id);
+      });
+      return toAdd;
+    };
+
     this.set = function(resultList) {
       console.log("setting");
 
-      // %%%
+      // %
       if (resultList.length !== 0) {
         resultList.forEach(function(item, index) {
-          var toAdd = $("<li></li>");
           console.log(item);
-          toAdd.text(item.name);
-          console.log("adding", toAdd);
+          var toAdd = this.createListItem(item);
           this.resultContainer.append(toAdd);
         }.bind(this));
       } else {
-        var toAdd = $("<li></li>");
+        var toAdd = this.createListItem();
         toAdd.text("No Results :/");
         console.log("adding", toAdd);
         this.resultContainer.append(toAdd);
       }
-      // %%%
+      // %
 
     };
 
@@ -155,9 +189,7 @@ $(document).ready(function() {
     this.fetch = function(searchTerm) {
       console.log("pulling");
       this.toggleLoading();
-      var request = buildSearchRequest(searchTerm);
-      console.log("searching ", request);
-      placeService.nearbySearch(request, function(data, status) {
+      searchServices.nearbySearch(searchTerm, function(data, status) {
         console.log("recieved data", status);
         this.clear();
         this.toggleLoading();
@@ -194,6 +226,5 @@ $(document).ready(function() {
   // Run the initialize function when the window has finished loading.
   // google.maps.event.addDomListener(window, 'load', initialize);
   initialize();
-
 
 });
