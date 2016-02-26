@@ -239,5 +239,8 @@ exports.findOrCreate = function(userToAdd, next) {
       );
     };
 
+    exports.addPlace = function(userId, placeId) {
+      console.log(userId, placeId);
+    }
 
 };

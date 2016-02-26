@@ -20,6 +20,7 @@ $(document).ready(function() {
 
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
+
     // register global event handlers
     registerHandlers();
 
@@ -57,6 +58,11 @@ $(document).ready(function() {
   function MapArea(ID) {
 
     this.mapContainer = document.getElementById(ID);
+    this.mapContainer.addEventListener('click', function(e) {
+
+      if (e.srcElement.attributes.place_id)
+        console.log('saving! ' + e.srcElement.attributes.place_id.value);
+    });
 
     // set starting point for map
     this.pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
@@ -72,12 +78,18 @@ $(document).ready(function() {
     });
 
     this.generateInfoWindow = function(place) {
-      var contentString = '<div>' +
+      var contentString = '<div><button class="save--place" place_id="' + place.place_id + '">Save Place</button><span>' +
         place.name +
-        '</div>';
-      return (new google.maps.InfoWindow({
-        content: contentString
-      }));
+        '</span></div>';
+
+      var infoWindow = new google.maps.InfoWindow({
+        content: contentString,
+        place_id: place.place_id
+      });
+
+
+
+      return infoWindow;
     };
 
     this.generateMarker = function(place) {
@@ -91,10 +103,18 @@ $(document).ready(function() {
     this.placeMarker = function(place) {
       var marker = this.generateMarker(place);
       var infoWindow = this.generateInfoWindow(place);
+      infoWindow.opened = false;
       console.log(place);
       marker.addListener('click', function() {
-        infoWindow.open(this.map, marker);
-        console.log("clicked ", marker);
+        console.log("clicked ", marker, infoWindow.opened);
+        if (infoWindow.opened) {
+          console.log('closing');
+          
+          infoWindow.close(this.map, marker);
+        } else {
+          infoWindow.open(this.map, marker);
+        }
+        infoWindow.opened = !infoWindow.opened;
       });
     }.bind(this);
 
@@ -147,7 +167,7 @@ $(document).ready(function() {
         name: '',
         place_id: ''
       };
-      var toAdd = $("<li place_id=" + item.place_id + "></li>");
+      var toAdd = $("<li place_id='" + item.place_id + "'></li>");
       toAdd.text(item.name);
       $(toAdd).on('click', function() {
         map.execSearchById(item.place_id);

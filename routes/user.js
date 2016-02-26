@@ -81,7 +81,10 @@ function verifyAuth(req, res, next) {
 }
 
 
-
+router.post('/addPlace', verifyAuth, function(req, res) {
+  userService.addPlace(req.user.id, req.body.friendId);
+  res.sendStatus(200);
+})
 
 
 module.exports = router;
