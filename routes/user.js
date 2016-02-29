@@ -82,8 +82,13 @@ function verifyAuth(req, res, next) {
 
 
 router.post('/addPlace', verifyAuth, function(req, res) {
-  userService.addPlace(req.user.id, JSON.parse(req.body.place));
-  res.sendStatus(200);
+  userService.addPlace(req.user.id, JSON.parse(req.body.place)).then(function(msg) {
+    console.log('\tplace SAVED!')
+    res.sendStatus(200);
+  }, function(err) {
+    console.log('\tplace FAILED!')
+    res.status(501).json(err);
+  });
 });
 
 
