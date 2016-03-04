@@ -58,6 +58,7 @@
 	  var map;
 	  var searchServices;
 	  var searchTextBox;
+	  var userInterface;
 	  var prefetchResults;
 
 	  function initialize() {
@@ -74,8 +75,29 @@
 	    // sets up predictive search
 	    prefetchResults = new PrefetchResults("#predictiveContainer");
 
+	    userInterface = new UserInterface();
+
 	    // register global event handlers
 	    registerHandlers();
+	  }
+
+	  function UserInterface() {
+
+	    this.init = function () {
+	      $.get('/user/getUser').success(function (data) {
+	        console.log('got user', data);
+	        this.user = data;
+	      }.bind(this)).error(function (err) {
+	        console.log(err);
+	      }.bind(this));
+	    };
+
+	    this.hasPlace = function (place_id) {
+	      console.log(place_id, this.user['ownedPlaces'].hasOwnProperty(place_id));
+	      return this.user['ownedPlaces'].hasOwnProperty(place_id);
+	    };
+
+	    this.init();
 	  }
 
 	  // Holds functions related to using google search services
@@ -118,17 +140,35 @@
 	    this.place = place;
 	    this.marker = marker;
 
+	    this.classes = {
+	      save: 'save--place',
+	      remove: 'remove--place'
+	    };
+
 	    // set class name + template for HTML
-	    this.className = "save--place";
-	    this.template = '<div><button class=' + this.className + ' place_id="{{PLACE_ID}}">Save Place</button><span>{{PLACE_NAME}}</span></div>';
+	    this.template = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
 
 	    // set initial 'open' state
 	    this.open = false;
 
+	    // *************NEEDS ATTENTION***************
+	    this.buildActionBtn = function (place) {
+	      var btn = '';
+	      console.log('checking if saved...', userInterface.hasPlace(place.place_id));
+	      if (userInterface.hasPlace(place.place_id)) {
+	        btn = '<button class="' + this.classes.remove + '" place_id="' + place.place_id + '">Remove Place</button>';
+	      } else {
+	        btn = '<button class="' + this.classes.save + '" place_id="' + place.place_id + '">Save Place</button>';
+	      }
+	      return btn;
+	    };
+
 	    // function for formatting the template into useable HTML string
 	    this.buildInfoWindow = function (place) {
 
-	      var contentString = this.template.replace("{{PLACE_ID}}", place.place_id).replace("{{PLACE_NAME}}", place.name);
+	      var btn = this.buildActionBtn(place);
+
+	      var contentString = this.template.replace("{{PLACE_ID}}", place.place_id).replace("{{PLACE_NAME}}", place.name).replace("{{ACTION_BTN}}", btn);
 
 	      return contentString;
 	    };
@@ -139,7 +179,9 @@
 	    this.savePlace = function (place) {
 	      console.log('saving! ' + place);
 	      var data = (0, _stringify2.default)(place);
-	      $.post('/user/addPlace', { place: data }).success(function (msg) {
+	      $.post('/user/addPlace', {
+	        place: data
+	      }).success(function (msg) {
 	        // on success, log message
 	        console.log(msg);
 	      }).error(function (err) {
@@ -148,17 +190,44 @@
 	      });
 	    };
 
+	    // *************NEEDS ATTENTION***************
+	    this.removePlace = function (place) {
+	      console.log('removing! ' + (0, _stringify2.default)(place));
+	      var data = (0, _stringify2.default)(place);
+	      $.post('/user/removePlace', {
+	        place: data
+	      }).success(function (msg) {
+	        // on success, log message
+	        console.log(msg);
+	      }).error(function (err) {
+	        // on error, log error
+	        console.log(err);
+	      });
+	    };
+
+	    // *************NEEDS ATTENTION***************
 	    // Attaches a click event to the 'save place' button
 	    // Only executed after info window becomes accessable through DOM.
 	    // Passes place info to 'savePlace' function
 	    this.registerSaveHandler = function (place) {
 
-	      // finds element through class name + place_id attr selector
-	      var query = '.' + this.className + "[place_id='" + place.place_id + "']";
+	      var query;
 
-	      $(query).on('click', function () {
-	        this.savePlace(place);
-	      }.bind(this));
+	      if (userInterface.hasPlace(place.place_id)) {
+	        // finds element through class name + place_id attr selector
+	        query = '.' + this.classes.remove + "[place_id='" + place.place_id + "']";
+
+	        $(query).on('click', function () {
+	          this.removePlace(place);
+	        }.bind(this));
+	      } else {
+
+	        query = '.' + this.classes.save + "[place_id='" + place.place_id + "']";
+
+	        $(query).on('click', function () {
+	          this.savePlace(place);
+	        }.bind(this));
+	      }
 	    };
 
 	    // Builds the actual info window and sets 'domready'
