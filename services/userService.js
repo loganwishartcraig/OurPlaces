@@ -5,7 +5,7 @@ var User = require('../models/userModel');
 function serealizeUserResult(userRecord) {
 
   var toReturn = {};
-  toReturn.id = userRecord.id;
+  toReturn.id = userRecord.userId;
   toReturn.firstName = userRecord.firstName;
   toReturn.lastName = userRecord.lastName;
   toReturn.friends = userRecord.friends;
@@ -122,6 +122,8 @@ exports.findOrCreate = function(userToAdd, next) {
     return (
       new Promise(function(res, rej) {
 
+        console.log('looking up ', friendId)
+
         var userAddingId = userAdding.id;
 
         lookupUser(friendId).then(function(user) {
@@ -195,6 +197,9 @@ exports.findOrCreate = function(userToAdd, next) {
   exports.addFriend = function(userId, friendId) {
 
     // pretty unhappy with this function. Tons of duplicated code.
+
+
+    // $$$$$$$$$$$$$$$$$$$$$$$$$$ broken $$$$$$$$$$$$$$$$$$$$$$$$$$$
     return (
       new Promise(function(res, rej) {
 
@@ -293,6 +298,43 @@ exports.findOrCreate = function(userToAdd, next) {
           console.log('\tplace not already there');
 
           user.ownedPlaces[place.place_id] = place;
+          user.markModified('ownedPlaces');
+
+          console.log('\ttrying to save');
+          // A named function should replace the user.save callback
+          user.save(function(err) {
+            if (err) return rej({
+              message: "Error saving user"
+            });
+            else return res();
+          });
+
+        }, function(err) {
+          return rej(err);
+        });
+
+      })
+    );
+
+  };
+
+  exports.removePlace = function(userId, place) {
+
+    return (
+      new Promise(function(res, rej) {
+
+        lookupUser(userId).then(function(user) {
+
+          console.log("\tremoving ", user.ownedPlaces);
+          // if (findPlaceIndex(user.ownedPlaces, placeId) !== -1) return rej({
+          //   message: "Place is already saved :o"
+          // });
+          if (!user.ownedPlaces.hasOwnProperty(place.place_id)) return rej({
+            message: "Place was not already saved :o"
+          });
+          console.log('\tplace is there');
+
+          delete user.ownedPlaces[place.place_id];
           user.markModified('ownedPlaces');
 
           console.log('\ttrying to save');

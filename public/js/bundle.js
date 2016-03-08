@@ -50,6 +50,10 @@
 
 	var _stringify2 = _interopRequireDefault(_stringify);
 
+	var _keys = __webpack_require__(4);
+
+	var _keys2 = _interopRequireDefault(_keys);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	$(document).ready(function () {
@@ -75,6 +79,7 @@
 	    // sets up predictive search
 	    prefetchResults = new PrefetchResults("#predictiveContainer");
 
+	    // sets up interface for user account
 	    userInterface = new UserInterface();
 
 	    // register global event handlers
@@ -93,8 +98,54 @@
 	    };
 
 	    this.hasPlace = function (place_id) {
-	      console.log(place_id, this.user['ownedPlaces'].hasOwnProperty(place_id));
-	      return this.user['ownedPlaces'].hasOwnProperty(place_id);
+	      console.log(place_id, this.user.ownedPlaces.hasOwnProperty(place_id));
+	      return this.user.ownedPlaces.hasOwnProperty(place_id);
+	    };
+
+	    this.removePlace = function (placeId) {
+	      delete this.user.ownedPlaces[placeId];
+	    };
+
+	    this.addPlace = function (place) {
+	      this.user.ownedPlaces[place.place_id] = place;
+	    };
+
+	    this.addFriend = function (friendId) {
+
+	      $.post('/user/addRequest', {
+	        friendId: friendId
+	      }).success(function (msg) {
+	        console.log(msg);
+	      }).error(function (err) {
+	        console.log(err);
+	      });
+	    };
+
+	    this.removeFriend = function (friend) {};
+
+	    // *************NEEDS ATTENTION***************
+	    // - should be refactored into a 'get x' generator
+	    this.getMyPlaces = function () {
+
+	      var toReturn = [];
+
+	      (0, _keys2.default)(this.user.ownedPlaces).forEach(function (item, index) {
+	        toReturn.push(this.user.ownedPlaces[item]);
+	      }.bind(this));
+
+	      return toReturn;
+	    };
+
+	    // *************NEEDS ATTENTION***************
+	    // - should be refactored into a 'get x' generator
+	    this.getFriendPlaces = function () {
+	      var toReturn = [];
+
+	      (0, _keys2.default)(this.user.friendsPlaces).forEach(function (item, index) {
+	        toReturn.push(this.user.friendsPlaces[item]);
+	      }.bind(this));
+
+	      return toReturn;
 	    };
 
 	    this.init();
@@ -108,6 +159,7 @@
 	    this.placeServiceConn = new google.maps.places.PlacesService(map);
 
 	    // *************NEEDS ATTENTION***************
+	    // - should be more flexible, location should not be static.
 	    // function for building basic search requests
 	    this.buildSearchRequest = function (keyword) {
 	      return {
@@ -146,21 +198,21 @@
 	    };
 
 	    // set class name + template for HTML
-	    this.template = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
+	    this.mainTemplate = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
+	    this.btnTemplate = '<button class="{{BTN_CLASS}}" place_id="{{PLACE_ID}}">{{BTN_TEXT}}</button>';
 
 	    // set initial 'open' state
 	    this.open = false;
 
 	    // *************NEEDS ATTENTION***************
+	    // - probably a better way to build the template?
 	    this.buildActionBtn = function (place) {
-	      var btn = '';
 	      console.log('checking if saved...', userInterface.hasPlace(place.place_id));
 	      if (userInterface.hasPlace(place.place_id)) {
-	        btn = '<button class="' + this.classes.remove + '" place_id="' + place.place_id + '">Remove Place</button>';
+	        return this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.remove).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Remove Place');
 	      } else {
-	        btn = '<button class="' + this.classes.save + '" place_id="' + place.place_id + '">Save Place</button>';
+	        return this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.save).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Save Place');
 	      }
-	      return btn;
 	    };
 
 	    // function for formatting the template into useable HTML string
@@ -168,12 +220,18 @@
 
 	      var btn = this.buildActionBtn(place);
 
-	      var contentString = this.template.replace("{{PLACE_ID}}", place.place_id).replace("{{PLACE_NAME}}", place.name).replace("{{ACTION_BTN}}", btn);
+	      var contentString = this.mainTemplate.replace("{{PLACE_ID}}", place.place_id).replace("{{PLACE_NAME}}", place.name).replace("{{ACTION_BTN}}", btn);
 
 	      return contentString;
 	    };
 
+	    this.rebuildInfoContent = function (place) {
+	      this.pane.setContent(this.buildInfoWindow(place));
+	    };
+
 	    // *************NEEDS ATTENTION***************
+	    // - could potentially use generators again here?
+	    // - maybe abstract out the success/error funcitons
 	    // function used when 'save place' button is clicked.
 	    // Posts place information to server & handles response
 	    this.savePlace = function (place) {
@@ -184,13 +242,17 @@
 	      }).success(function (msg) {
 	        // on success, log message
 	        console.log(msg);
-	      }).error(function (err) {
+	        userInterface.addPlace(place);
+	        this.rebuildInfoContent(place);
+	      }.bind(this)).error(function (err) {
 	        // on error, log error
 	        console.log(err);
 	      });
 	    };
 
 	    // *************NEEDS ATTENTION***************
+	    // - could potentially use generators again here?
+	    // - maybe abstract out the success/error funcitons
 	    this.removePlace = function (place) {
 	      console.log('removing! ' + (0, _stringify2.default)(place));
 	      var data = (0, _stringify2.default)(place);
@@ -199,13 +261,17 @@
 	      }).success(function (msg) {
 	        // on success, log message
 	        console.log(msg);
-	      }).error(function (err) {
+	        userInterface.removePlace(place.place_id);
+	        this.rebuildInfoContent(place);
+	      }.bind(this)).error(function (err) {
 	        // on error, log error
 	        console.log(err);
 	      });
 	    };
 
 	    // *************NEEDS ATTENTION***************
+	    // - again, maybe use generators, seems like lots of duplicated code
+	    // - should abstract out setting the event/handler?
 	    // Attaches a click event to the 'save place' button
 	    // Only executed after info window becomes accessable through DOM.
 	    // Passes place info to 'savePlace' function
@@ -294,6 +360,8 @@
 	      });
 	    }.bind(this);
 
+	    // *************NEEDS ATTENTION***************
+	    // - shouldn't be requiring a google status.
 	    this.plotPlaces = function (res, status) {
 	      console.log(res, status);
 	      // proceed only if succeeded
@@ -312,6 +380,28 @@
 
 	    this.execSearchById = function (placeId) {
 	      searchServices.placeDetails(placeId, this.placeMarker);
+	    };
+
+	    // *************NEEDS ATTENTION***************
+	    // - GENERATORS.
+	    // - need to create some sort of internally managed array to keep track
+	    //   of markers so they can be toggled.
+	    this.plotMyPlaces = function () {
+	      var myPlaces = userInterface.getMyPlaces();
+
+	      for (var i = 0; i < (0, _keys2.default)(myPlaces).length; i++) {
+	        this.placeMarker(myPlaces[i]);
+	      }
+	    };
+
+	    // *************NEEDS ATTENTION***************
+	    // - GENERATORS.
+	    this.plotFriendPlaces = function () {
+	      var myPlaces = userInterface.getFriendPlaces();
+
+	      for (var i = 0; i < (0, _keys2.default)(myPlaces).length; i++) {
+	        this.placeMarker(myPlaces[i]);
+	      }
 	    };
 	  }
 
@@ -391,6 +481,10 @@
 	    };
 	  }
 
+	  function handleSearchSubmit(evt) {
+	    map.execNearbySearch(searchTextBox.getInput());
+	  }
+
 	  function handleSearchInput(evt) {
 
 	    if (evt.keyCode === 13) return map.execNearbySearch(searchTextBox.getInput());
@@ -399,17 +493,57 @@
 	    if (searchTextBox.length() >= 4) return prefetchResults.fetch(searchTextBox.getInput());
 	  }
 
+	  function handleRequestSubmit(evt) {
+
+	    var friendId = $('.request--input').val();
+
+	    if (!friendId) return console.error('No Friend ID was entered');
+
+	    userInterface.addFriend(friendId);
+	  }
+
+	  function handleMyPlaceFilter(evt) {
+	    map.plotMyPlaces();
+	  }
+
+	  function handleFriendPlaceFilter(evt) {
+	    map.plotFriendPlaces();
+	  }
+
+	  function handleOpenMail(evt) {
+	    $('.mail--items').toggleClass('hide');
+	  }
+
+	  // *************NEEDS ATTENTION***************
+	  // - generator or use bubbling
+	  function handleReqAccept(evt) {
+	    var target = $(evt.target);
+	    var id = $(target.parent()).attr('request-id');
+	    console.log("accepting ", id);
+	    $.post('/user/acceptRequest', { friendId: id }).success(function (msg) {
+	      console.log(msg);
+	    }).error(function (err) {
+	      console.log(err);
+	    });
+	  }
+
+	  function handleReqReject(evt) {}
+
 	  // registers global event handlers
 	  function registerHandlers() {
 	    // search submit button => excecute search
-	    document.getElementById('placesSearchSubmit').addEventListener('click', function () {
-	      map.execNearbySearch(searchTextBox.getInput());
-	    });
+	    document.getElementById('placesSearchSubmit').addEventListener('click', handleSearchSubmit);
 	    document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
+	    document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
+	    document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
+	    document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
+	    document.getElementById('openMail').addEventListener('click', handleOpenMail);
+
+	    // *************NEEDS ATTENTION***************
+	    $(".mail--btn.accept").click(handleReqAccept);
+	    $(".mail--btn.reject").click(handleReqReject);
 	  }
 
-	  // Run the initialize function when the window has finished loading.
-	  // google.maps.event.addDomListener(window, 'load', initialize);
 	  initialize();
 	});
 
@@ -434,6 +568,173 @@
 
 	var core = module.exports = {version: '1.2.6'};
 	if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(5), __esModule: true };
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(6);
+	module.exports = __webpack_require__(3).Object.keys;
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 19.1.2.14 Object.keys(O)
+	var toObject = __webpack_require__(7);
+
+	__webpack_require__(9)('keys', function($keys){
+	  return function keys(it){
+	    return $keys(toObject(it));
+	  };
+	});
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 7.1.13 ToObject(argument)
+	var defined = __webpack_require__(8);
+	module.exports = function(it){
+	  return Object(defined(it));
+	};
+
+/***/ },
+/* 8 */
+/***/ function(module, exports) {
+
+	// 7.2.1 RequireObjectCoercible(argument)
+	module.exports = function(it){
+	  if(it == undefined)throw TypeError("Can't call method on  " + it);
+	  return it;
+	};
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// most Object methods by ES6 should accept primitives
+	var $export = __webpack_require__(10)
+	  , core    = __webpack_require__(3)
+	  , fails   = __webpack_require__(14);
+	module.exports = function(KEY, exec){
+	  var fn  = (core.Object || {})[KEY] || Object[KEY]
+	    , exp = {};
+	  exp[KEY] = exec(fn);
+	  $export($export.S + $export.F * fails(function(){ fn(1); }), 'Object', exp);
+	};
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var global    = __webpack_require__(11)
+	  , core      = __webpack_require__(3)
+	  , ctx       = __webpack_require__(12)
+	  , PROTOTYPE = 'prototype';
+
+	var $export = function(type, name, source){
+	  var IS_FORCED = type & $export.F
+	    , IS_GLOBAL = type & $export.G
+	    , IS_STATIC = type & $export.S
+	    , IS_PROTO  = type & $export.P
+	    , IS_BIND   = type & $export.B
+	    , IS_WRAP   = type & $export.W
+	    , exports   = IS_GLOBAL ? core : core[name] || (core[name] = {})
+	    , target    = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE]
+	    , key, own, out;
+	  if(IS_GLOBAL)source = name;
+	  for(key in source){
+	    // contains in native
+	    own = !IS_FORCED && target && key in target;
+	    if(own && key in exports)continue;
+	    // export native or passed
+	    out = own ? target[key] : source[key];
+	    // prevent global pollution for namespaces
+	    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
+	    // bind timers to global for call from export context
+	    : IS_BIND && own ? ctx(out, global)
+	    // wrap global constructors for prevent change them in library
+	    : IS_WRAP && target[key] == out ? (function(C){
+	      var F = function(param){
+	        return this instanceof C ? new C(param) : C(param);
+	      };
+	      F[PROTOTYPE] = C[PROTOTYPE];
+	      return F;
+	    // make static versions for prototype methods
+	    })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
+	    if(IS_PROTO)(exports[PROTOTYPE] || (exports[PROTOTYPE] = {}))[key] = out;
+	  }
+	};
+	// type bitmap
+	$export.F = 1;  // forced
+	$export.G = 2;  // global
+	$export.S = 4;  // static
+	$export.P = 8;  // proto
+	$export.B = 16; // bind
+	$export.W = 32; // wrap
+	module.exports = $export;
+
+/***/ },
+/* 11 */
+/***/ function(module, exports) {
+
+	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
+	var global = module.exports = typeof window != 'undefined' && window.Math == Math
+	  ? window : typeof self != 'undefined' && self.Math == Math ? self : Function('return this')();
+	if(typeof __g == 'number')__g = global; // eslint-disable-line no-undef
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// optional / simple context binding
+	var aFunction = __webpack_require__(13);
+	module.exports = function(fn, that, length){
+	  aFunction(fn);
+	  if(that === undefined)return fn;
+	  switch(length){
+	    case 1: return function(a){
+	      return fn.call(that, a);
+	    };
+	    case 2: return function(a, b){
+	      return fn.call(that, a, b);
+	    };
+	    case 3: return function(a, b, c){
+	      return fn.call(that, a, b, c);
+	    };
+	  }
+	  return function(/* ...args */){
+	    return fn.apply(that, arguments);
+	  };
+	};
+
+/***/ },
+/* 13 */
+/***/ function(module, exports) {
+
+	module.exports = function(it){
+	  if(typeof it != 'function')throw TypeError(it + ' is not a function!');
+	  return it;
+	};
+
+/***/ },
+/* 14 */
+/***/ function(module, exports) {
+
+	module.exports = function(exec){
+	  try {
+	    return !!exec();
+	  } catch(e){
+	    return true;
+	  }
+	};
 
 /***/ }
 /******/ ]);

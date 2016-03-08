@@ -8,9 +8,9 @@
   <link href='https://fonts.googleapis.com/css?family=PT+Sans+Narrow:400,700' rel='stylesheet' type='text/css'>
   <link rel="stylesheet" href="/css/home.css" type="text/css">
   <style>
-    .map--area {
-      background: #e5e3df;
-    }
+  .map--area {
+    background: #e5e3df;
+  }
   </style>
 </head>
 
@@ -22,27 +22,34 @@
           <span class="control--header">OurPlaces</span>
           <ul id="filterContainer" class="filter--ctrls">
             <li class="filter--ctrl">
-              <button class="filter--btn active">My Places</button>
+              <button id="filterMyPlaces" class="filter--btn active">My Places</button>
             </li>
             <li>
-              <button class="filter--btn inactive">Everyones Places</button>
+              <button id="filterFriendPlaces" class="filter--btn inactive">Everyones Places</button>
             </li>
           </ul>
         </div>
         <div class="request--contianer">
-          <span>Add Friend</span>
-          <button>+</button>
+          <div class="request--input--container">
+            <input class="request--input" type="text" name="friendId" placeholder="Friend ID">
+            <button id="addFriendSubmit" class="request--btn">ADD</button>
+          </div>
         </div>
         <div class="account--container">
           <span>{{user.firstName}}</span>
           <div class="mail--container">
+          <div id="openMail" class="mail--notification">
             {{#if user.requestCount}}
             <img class="mail--img active" src="/images/mail--active.png">
-            <span class="mail--txt active">{{user.requestCount}}</span> 
-            {{else}}
+            <span class="mail--txt active">{{user.requestCount}}</span> {{else}}
             <img class="mail--img inactive" src="/images/mail--inactive.png">
-            <span class="mail--txt inactive">0</span> 
-            {{/if}}
+            <span class="mail--txt inactive">0</span> {{/if}}
+            </div>
+            <ul class="mail--items hide">
+            {{#each user.friendRequests}}
+              <li><span class="mail--name">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions" request-id="{{this.id}}"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
+            {{/each}}
+            </ul>
           </div>
           <div class="settings--container"></div>
         </div>
@@ -50,10 +57,15 @@
       <div class="map--area">
         <div class="controls--container">
           <div class="search--container">
-          <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
-          <ul id="predictiveContainer" class="predictive--results">
-            <li class="prefetch--load--img hide"><div class='uil-ring-css'><div></div></div></li>
-          </ul></div>
+            <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
+            <ul id="predictiveContainer" class="predictive--results">
+              <li class="prefetch--load--img hide">
+                <div class='uil-ring-css'>
+                  <div></div>
+                </div>
+              </li>
+            </ul>
+          </div>
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>
         <div id="map" class="map">

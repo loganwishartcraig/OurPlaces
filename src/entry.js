@@ -22,6 +22,7 @@ $(document).ready(function() {
     // sets up predictive search
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
+    // sets up interface for user account
     userInterface = new UserInterface();
 
     // register global event handlers
@@ -41,8 +42,58 @@ $(document).ready(function() {
     };
 
     this.hasPlace = function(place_id) {
-      console.log(place_id, this.user['ownedPlaces'].hasOwnProperty(place_id))
-      return this.user['ownedPlaces'].hasOwnProperty(place_id);
+      console.log(place_id, this.user.ownedPlaces.hasOwnProperty(place_id));
+      return this.user.ownedPlaces.hasOwnProperty(place_id);
+    };
+
+    this.removePlace = function(placeId) {
+      delete this.user.ownedPlaces[placeId];
+    };
+
+    this.addPlace = function(place) {
+      this.user.ownedPlaces[place.place_id] = place;
+    };
+
+    this.addFriend = function(friendId) {
+
+      $.post('/user/addRequest', {
+        friendId: friendId
+      }).success(function(msg) {
+        console.log(msg);
+      }).error(function(err) {
+        console.log(err);
+      });
+
+    };
+
+    this.removeFriend = function(friend) {
+
+    };
+
+
+    // *************NEEDS ATTENTION***************
+    // - should be refactored into a 'get x' generator
+    this.getMyPlaces = function() {
+
+      var toReturn = [];
+
+      Object.keys(this.user.ownedPlaces).forEach(function(item, index) {
+        toReturn.push(this.user.ownedPlaces[item]);
+      }.bind(this));
+
+      return toReturn;
+    };
+
+    // *************NEEDS ATTENTION***************
+    // - should be refactored into a 'get x' generator
+    this.getFriendPlaces = function() {
+      var toReturn = [];
+
+      Object.keys(this.user.friendsPlaces).forEach(function(item, index) {
+        toReturn.push(this.user.friendsPlaces[item]);
+      }.bind(this));
+
+      return toReturn;
     };
 
     this.init();
@@ -57,6 +108,7 @@ $(document).ready(function() {
     this.placeServiceConn = new google.maps.places.PlacesService(map);
 
     // *************NEEDS ATTENTION***************
+    // - should be more flexible, location should not be static.
     // function for building basic search requests
     this.buildSearchRequest = function(keyword) {
       return ({
@@ -96,22 +148,22 @@ $(document).ready(function() {
     };
 
     // set class name + template for HTML
-    this.template = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
+    this.mainTemplate = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
+    this.btnTemplate = '<button class="{{BTN_CLASS}}" place_id="{{PLACE_ID}}">{{BTN_TEXT}}</button>';
 
     // set initial 'open' state
     this.open = false;
 
 
     // *************NEEDS ATTENTION***************
+    // - probably a better way to build the template?
     this.buildActionBtn = function(place) {
-      var btn = '';
       console.log('checking if saved...', userInterface.hasPlace(place.place_id));
       if (userInterface.hasPlace(place.place_id)) {
-        btn = '<button class="' + this.classes.remove + '" place_id="' + place.place_id + '">Remove Place</button>';
+        return (this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.remove).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Remove Place'));
       } else {
-        btn = '<button class="' + this.classes.save + '" place_id="' + place.place_id + '">Save Place</button>';
+        return (this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.save).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Save Place'));
       }
-      return btn;
     };
 
     // function for formatting the template into useable HTML string
@@ -119,7 +171,7 @@ $(document).ready(function() {
 
       var btn = this.buildActionBtn(place);
 
-      var contentString = this.template.replace("{{PLACE_ID}}", place.place_id)
+      var contentString = this.mainTemplate.replace("{{PLACE_ID}}", place.place_id)
         .replace("{{PLACE_NAME}}", place.name)
         .replace("{{ACTION_BTN}}", btn);
 
@@ -127,7 +179,13 @@ $(document).ready(function() {
 
     };
 
+    this.rebuildInfoContent = function(place) {
+      this.pane.setContent(this.buildInfoWindow(place));
+    };
+
     // *************NEEDS ATTENTION***************
+    // - could potentially use generators again here?
+    // - maybe abstract out the success/error funcitons
     // function used when 'save place' button is clicked.
     // Posts place information to server & handles response
     this.savePlace = function(place) {
@@ -138,13 +196,17 @@ $(document).ready(function() {
       }).success(function(msg) {
         // on success, log message
         console.log(msg);
-      }).error(function(err) {
+        userInterface.addPlace(place);
+        this.rebuildInfoContent(place);
+      }.bind(this)).error(function(err) {
         // on error, log error
         console.log(err);
       });
     };
 
     // *************NEEDS ATTENTION***************
+    // - could potentially use generators again here?
+    // - maybe abstract out the success/error funcitons
     this.removePlace = function(place) {
       console.log('removing! ' + JSON.stringify(place));
       var data = JSON.stringify(place);
@@ -153,13 +215,17 @@ $(document).ready(function() {
       }).success(function(msg) {
         // on success, log message
         console.log(msg);
-      }).error(function(err) {
+        userInterface.removePlace(place.place_id);
+        this.rebuildInfoContent(place);
+      }.bind(this)).error(function(err) {
         // on error, log error
         console.log(err);
       });
     };
 
     // *************NEEDS ATTENTION***************
+    // - again, maybe use generators, seems like lots of duplicated code
+    // - should abstract out setting the event/handler?
     // Attaches a click event to the 'save place' button
     // Only executed after info window becomes accessable through DOM. 
     // Passes place info to 'savePlace' function
@@ -169,14 +235,14 @@ $(document).ready(function() {
 
       if (userInterface.hasPlace(place.place_id)) {
         // finds element through class name + place_id attr selector
-       query = '.' + this.classes.remove + "[place_id='" + place.place_id + "']";
+        query = '.' + this.classes.remove + "[place_id='" + place.place_id + "']";
 
         $(query).on('click', function() {
           this.removePlace(place);
         }.bind(this));
       } else {
-        
-         query = '.' + this.classes.save + "[place_id='" + place.place_id + "']";
+
+        query = '.' + this.classes.save + "[place_id='" + place.place_id + "']";
 
         $(query).on('click', function() {
           this.savePlace(place);
@@ -253,6 +319,8 @@ $(document).ready(function() {
     }.bind(this);
 
 
+    // *************NEEDS ATTENTION***************
+    // - shouldn't be requiring a google status.
     this.plotPlaces = function(res, status) {
       console.log(res, status);
       // proceed only if succeeded
@@ -271,6 +339,30 @@ $(document).ready(function() {
 
     this.execSearchById = function(placeId) {
       searchServices.placeDetails(placeId, this.placeMarker);
+    };
+
+
+    // *************NEEDS ATTENTION***************
+    // - GENERATORS.
+    // - need to create some sort of internally managed array to keep track
+    //   of markers so they can be toggled.
+    this.plotMyPlaces = function() {
+      var myPlaces = userInterface.getMyPlaces();
+
+      for (var i = 0; i < Object.keys(myPlaces).length; i++) {
+        this.placeMarker(myPlaces[i]);
+      }
+
+    };
+
+    // *************NEEDS ATTENTION***************
+    // - GENERATORS.
+    this.plotFriendPlaces = function() {
+      var myPlaces = userInterface.getFriendPlaces();
+
+      for (var i = 0; i < Object.keys(myPlaces).length; i++) {
+        this.placeMarker(myPlaces[i]);
+      }
     };
 
   }
@@ -354,7 +446,9 @@ $(document).ready(function() {
   }
 
 
-
+  function handleSearchSubmit(evt) {
+    map.execNearbySearch(searchTextBox.getInput());
+  }
 
   function handleSearchInput(evt) {
 
@@ -367,18 +461,62 @@ $(document).ready(function() {
   }
 
 
+  function handleRequestSubmit(evt) {
+
+    var friendId = $('.request--input').val();
+
+    if (!friendId) return console.error('No Friend ID was entered');
+
+    userInterface.addFriend(friendId);
+
+  }
+
+
+  function handleMyPlaceFilter(evt) {
+    map.plotMyPlaces();
+  }
+
+  function handleFriendPlaceFilter(evt) {
+    map.plotFriendPlaces();
+  }
+
+  function handleOpenMail(evt) {
+    $('.mail--items').toggleClass('hide');
+  }
+
+
+  // *************NEEDS ATTENTION***************
+  // - generator or use bubbling
+  function handleReqAccept(evt) {
+    var target = $(evt.target);
+    var id = $(target.parent()).attr('request-id');
+    console.log("accepting ", id);
+    $.post('/user/acceptRequest', {friendId: id}).success(function(msg) {
+      console.log(msg);
+    }).error(function(err) {
+      console.log(err);
+    });
+  }
+
+  function handleReqReject(evt) {
+
+  }
 
   // registers global event handlers
   function registerHandlers() {
     // search submit button => excecute search
-    document.getElementById('placesSearchSubmit').addEventListener('click', function() {
-      map.execNearbySearch(searchTextBox.getInput());
-    });
+    document.getElementById('placesSearchSubmit').addEventListener('click', handleSearchSubmit);
     document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
+    document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
+    document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
+    document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
+    document.getElementById('openMail').addEventListener('click', handleOpenMail);
+  
+    // *************NEEDS ATTENTION***************
+    $(".mail--btn.accept").click(handleReqAccept);
+    $(".mail--btn.reject").click(handleReqReject);
   }
 
-  // Run the initialize function when the window has finished loading.
-  // google.maps.event.addDomListener(window, 'load', initialize);
   initialize();
 
 });

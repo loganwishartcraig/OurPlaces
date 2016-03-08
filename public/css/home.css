@@ -1,5 +1,5 @@
-
 /* general */
+
 html,
 body,
 .full--height {
@@ -13,7 +13,8 @@ h3,
 a,
 p,
 span,
-button {
+button,
+input {
   font-family: 'PT Sans Narrow', sans-serif;
   color: #333;
 }
@@ -47,7 +48,6 @@ button {
   border: 0;
   background: none;
 }
-
 /* main layout */
 
 .main--container {
@@ -59,13 +59,37 @@ button {
   width: 130px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   background: #fffff0;
   box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.75);
   position: relative;
   z-index: 5;
 }
+/* nav components */
 
+.request--contianer {
+  margin: 1.25rem 0;
+  flex-grow: 2;
+}
+
+.request--input {
+  text-align: center;
+  width: 95%;
+  font-size: .8rem;
+  padding: .2rem .1rem;
+  margin-bottom: .5rem;
+  box-sizing: border-box;
+}
+
+.request--btn {
+  display: inline-block;
+  background: #f0ddfb;
+  font-weight: 700;
+  font-size: .75rem;
+  padding: .15rem 1.25rem;
+  /*box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);*/
+  
+  border: 1px solid #8A7B92;
+}
 /* control panel */
 
 .control--header {
@@ -75,9 +99,8 @@ button {
   padding-top: 1rem;
   padding-bottom: .5rem;
 }
+/* filters */
 
-
-  /* filters */
 .filter--ctrls {
   border-top: 1px solid #f0ddfb;
   border-bottom: 1px solid #f0ddfb;
@@ -108,8 +131,8 @@ button {
 .filter--btn.inactive {
   border-right: 8px solid #cecdcd;
 }
-
 /* map container */
+
 .map--area {
   flex-grow: 1;
   height: 100%;
@@ -121,8 +144,7 @@ button {
   height: 100%;
   width: 100%;
 }
-
-  /* map controls */
+/* map controls */
 
 .controls--container {
   position: absolute;
@@ -131,7 +153,7 @@ button {
   padding: 10px;
 }
 
-  .search--container {
+.search--container {
   display: inline-block;
   vertical-align: top;
   min-width: 300px;
@@ -139,9 +161,8 @@ button {
 }
 
 .search--input {
-  padding: .5rem .75rem;
+  padding: .4rem .75rem;
   margin-bottom: .2rem;
-
   width: 100%;
   box-sizing: border-box;
   box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
@@ -158,8 +179,7 @@ button {
   box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.25);
   border: 1px solid #8A7B92;
 }
-
-  /* predictive results */
+/* predictive results */
 
 .predictive--results {
   max-height: 13.5rem;
@@ -174,7 +194,8 @@ button {
   color: #fffff0;
   background: rgba(0, 0, 0, .625);
   box-sizing: border-box;
-  cursor: button;
+  cursor: pointer;
+  font-family: 'PT Sans Narrow', sans-serif;
 }
 
 .predictive--results > li:hover {
@@ -190,8 +211,6 @@ button {
   color: #fffff0;
   background: rgba(0, 0, 0, .625);
 }
-
-
 /* utility */
 
 .center--content {
@@ -202,10 +221,14 @@ button {
   position: relative;
 }
 
+.hide {
+  display: none;
+}
+
 /* mail/notifications */
 
 .mail--container {
-  padding: 1rem 0 2rem 0;
+  padding: 1rem 0;
 }
 
 .mail--txt,
@@ -227,6 +250,24 @@ button {
   padding-left: .5rem;
 }
 
+.mail--items > li {
+  width: 80%;
+  margin: 0 auto;
+  overflow: auto;
+  padding: .25rem 0;
+  text-align: left;
+}
+
+.mail--name {
+  display: block;
+  margin-bottom: .1rem;
+  margin-left: .1rem;
+}
+
+.mail--notification {
+  cursor: pointer;
+}
+
 .mail--txt.active {
   color: #ff4444;
 }
@@ -235,9 +276,24 @@ button {
   color: #cccbcb;
 }
 
-.hide {
-  display: none;
+.mail--btn {
+  display: inline-block;
+  width: 45%;
+  box-sizing: border-box;
+  line-height: 100%;
 }
+
+.mail--btn.accept {
+  border: 1px solid green;
+  margin-right:5%;
+  color: green;
+}
+
+.mail--btn.reject {
+  border: 1px solid red;
+  color: red;
+}
+
 
 /* PREFETCH LOADING ANIMATION */
 
@@ -399,4 +455,3 @@ button {
   -o-animation: uil-ring-anim 1.25s linear infinite;
   animation: uil-ring-anim 1.25s linear infinite;
 }
-

@@ -94,8 +94,13 @@ router.post('/addPlace', verifyAuth, function(req, res) {
 
 
 router.post('/removePlace', verifyAuth, function(req, res) {
-  console.log(JSON.parse(req.body.place));
-  res.sendStatus(200);
+  userService.removePlace(req.user.id, JSON.parse(req.body.place)).then(function(msg) {
+    console.log('\tplace REMOVED!');
+    res.sendStatus(200);
+  }, function(err) {
+    console.log('\tplace FAILED!');
+    res.status(501).json(err);
+  });
 });
 
 
