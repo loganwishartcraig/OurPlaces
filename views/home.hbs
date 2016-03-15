@@ -29,10 +29,17 @@
             </li>
           </ul>
         </div>
+        <div class="friend--container">
+            <span class="friend--header">My Friends</span>
+            <ul class="friend--list">
+              
+            </ul>
+        </div>
         <div class="request--contianer">
           <div class="request--input--container">
             <input class="request--input" type="text" name="friendId" placeholder="Friend ID">
             <button id="addFriendSubmit" class="request--btn">ADD</button>
+            <span id="requestStatus" style="display: block; text-align: center; margin-top: .5rem; color: red; font-style: italic; font-size: .8rem"></span>
           </div>
         </div>
         <div class="account--container">
@@ -40,16 +47,11 @@
           <div class="mail--container">
           <div id="openMail" class="mail--notification">
             {{#if user.requestCount}}
-            <img class="mail--img active" src="/images/mail--active.png">
+            <div class="mail--img active">&nbsp;</div>
             <span class="mail--txt active">{{user.requestCount}}</span> {{else}}
-            <img class="mail--img inactive" src="/images/mail--inactive.png">
+            <div class="mail--img inactive">&nbsp;</div>
             <span class="mail--txt inactive">0</span> {{/if}}
             </div>
-            <ul class="mail--items hide">
-            {{#each user.friendRequests}}
-              <li><span class="mail--name">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions" request-id="{{this.id}}"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
-            {{/each}}
-            </ul>
           </div>
           <div class="settings--container"></div>
         </div>
@@ -68,6 +70,16 @@
           </div>
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>
+        <ul class="mail--items hide">
+        {{#if user.requestCount}}
+            {{#each user.friendRequests}}
+              <li request-id="{{this.id}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
+            {{/each}}
+        {{else}}
+            <li><span>No Requests : /</span>
+        {{/if}}
+            <li id="closeMail"><span>Close</span></li>
+            </ul>
         <div id="map" class="map">
         </div>
       </div>

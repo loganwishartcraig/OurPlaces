@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>:33</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="http://localhost:3000/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=PT+Sans+Narrow:400,700' rel='stylesheet' type='text/css'>
+</head>
+
+<body>
+  <div class="page--wrapper full--height pos--rel">
+    <div class="main--container full--height">
+      <label class="reg--header">Pick a username ;)</label>
+      <span class="reg--text">Pick yo username, son</span>
+      <form action="/user/setUsername" method="POST">
+        <input type="text" name="username" placeholder="username">
+        <button type="submit">Done</button>
+      </form>
+      <span id="error-text" class="reg--error"></span>
+    </div>
+  </div>
+  <script src="http://localhost:3000/js/jquery-2.2.0.js"></script>
+  <script src="/js/register.js"></script>
+</body>
+
+</html>

@@ -4,6 +4,22 @@ var userService = require('../services/userService');
 
 /* GET home page. */
 
+router.get('/setUsername', verifyAuth, function(req, res) {
+
+  res.render('setUsername');
+
+});
+
+router.post('/setUsername', verifyAuth, function(req, res) {
+
+  userService.setUsername(req.user.id, req.body.username).then(function(msg) {
+    res.redirect('/home');
+  }, function(err) {
+    res.json(err);
+  });
+
+});
+
 router.get('/getUser', verifyAuth, function(req, res) {
   userService.getInfo(req.user.id, function(err, user) {
     if (err) res.status(501).json(err);
@@ -15,7 +31,7 @@ router.get('/getUser', verifyAuth, function(req, res) {
 
 router.post('/addRequest', verifyAuth, function(req, res) {
   console.log("\tADD REQUEST TO: ", req.body);
-  if (req.body.friendId === req.user.name.givenName) {
+  if (req.body.friendId === req.user.id) {
     res.status(400).json({message: "U can't add urself :o"});
   } else {
     userService.addRequest(req.body.friendId, req.user).then(function(msg) {

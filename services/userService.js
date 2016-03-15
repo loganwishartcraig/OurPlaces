@@ -7,6 +7,7 @@ function serealizeUserResult(userRecord) {
   var toReturn = {};
   toReturn.id = userRecord.userId;
   toReturn.firstName = userRecord.firstName;
+  toReturn.username = userRecord.username;
   toReturn.lastName = userRecord.lastName;
   toReturn.friends = userRecord.friends;
   toReturn.ownedPlaces = userRecord.ownedPlaces;
@@ -58,7 +59,7 @@ exports.findOrCreate = function(userToAdd, next) {
 
     User.findOne({
       userId: userId
-    }).populate('friends', 'firstName lastName userId').exec(function(err, user) {
+    }).populate('friends', 'firstName lastName userId ownedPlaces').exec(function(err, user) {
       if (err) return next({
         message: "Error looking up user"
       });
@@ -67,6 +68,34 @@ exports.findOrCreate = function(userToAdd, next) {
       });
       return next(null, serealizeUserResult(user));
     });
+
+
+  };
+
+  exports.setUsername = function(userId, username) {
+
+    return (new Promise(function(res, rej) {
+
+      User.findOne({
+        username: username
+      }).exec(function(err, user) {
+        if (err) return rej({message: "Error finding user"});
+        if (user) return rej({message: "Username already exists :x"});
+
+        lookupUser(userId).then(function(user) {
+
+          user.username = username;
+          user.save(function(err) {
+            if (err) return rej({message: "Error setting "});
+            return res();
+          });
+
+        }, function(err) {
+          if (err) return rej(err);
+        });
+      });
+
+    }));
 
 
   };
@@ -122,14 +151,14 @@ exports.findOrCreate = function(userToAdd, next) {
     return (
       new Promise(function(res, rej) {
 
-        console.log('looking up ', friendId)
+        console.log('looking up ', friendId);
 
         var userAddingId = userAdding.id;
 
         lookupUser(friendId).then(function(user) {
           console.log("\t\tChecking existing requests/firends");
           if (user.friendRequests.hasOwnProperty(userAddingId)) return rej({
-            message: "Request already pennnding :o"
+            message: "Request already pending :o"
           });
           if (findFriendIndex(user.friends, userAddingId) !== -1) return rej({
             message: "User is already ur friend ;)"
@@ -180,7 +209,7 @@ exports.findOrCreate = function(userToAdd, next) {
             if (err) return rej({
               message: "Error saving user"
             });
-            else return res();
+            return res();
           });
 
         }, function(err) {
@@ -196,89 +225,110 @@ exports.findOrCreate = function(userToAdd, next) {
 
   exports.addFriend = function(userId, friendId) {
 
-    // pretty unhappy with this function. Tons of duplicated code.
-
-
-    // $$$$$$$$$$$$$$$$$$$$$$$$$$ broken $$$$$$$$$$$$$$$$$$$$$$$$$$$
-    return (
-      new Promise(function(res, rej) {
-
-        lookupTwo(userId, friendId).then(function(userList) {
-
-          var user = userList[0],
-            friend = userList[1];
-
-          if (findFriendIndex(user.friends, friendId) !== -1) return rej({
-            message: "User is already ur friend ;)"
-          });
-          if (findFriendIndex(friend.friends, userId) !== -1) return rej({
-            message: "Friend already has u as a friend?"
-          });
-
-          if (user.friendRequests[friendId]) {
-            delete user.friendRequests[friendId];
-            user.markModified('friendRequests');
-          }
-
-          if (friend.friendRequests[userId]) {
-            delete friend.friendRequests[userId];
-            friend.markModified('friendRequests');
-          }
-
-          user.friends.push(friend);
-          user.markModified('friends');
-
-          friend.friends.push(user);
-          friend.markModified('friends');
-
-          user.save(function(err) {
-            if (err) return rej({
-              message: "Error saving user..."
-            });
-            friend.save(function(err) {
-              if (err) return rej({
-                message: "Error saving friend..."
-              });
-              return res();
-            });
-          });
-        }, function(err) {
-          return rej(err);
-        });
-      })
-    );
-
-  };
-
-
-  exports.removeFriend = function(userId, friendId) {
     return (
       new Promise(function(res, rej) {
 
         lookupUser(userId).then(function(user) {
 
-          var toRemove = findFriendIndex(user.friends, friendId);
-
-          if (toRemove === -1) return rej({
-            message: "User isn't a friend"
+          if (findFriendIndex(user.friends, friendId) !== -1) return rej({
+            message: "User is alraedy ur friend ;)"
           });
 
-          user.friends.splice(toRemove, 1);
-          user.markModified('friends');
+          if (!user.friendRequests.hasOwnProperty(friendId)) return rej({
+            message: "User hasn't requested ur friendship :o"
+          });
 
-          user.save(function(err) {
-            if (err) return rej({
-              message: "Error saving user"
+          lookupUser(friendId).then(function(friend) {
+
+            if (findFriendIndex(friend.friends, userId) !== -1) return rej({
+              message: "Friend alraedy has u as a friend? :s"
             });
-            else return res();
+
+            delete user.friendRequests[friendId];
+            user.markModified('friendRequests');
+            user.requestCount--;
+            user.friendCount++;
+
+            user.friends.push(friend);
+            user.markModified('friends');
+
+            friend.friends.push(user);
+            friend.markModified('friends');
+            friend.friendCount++;
+
+            friend.save(function(err) {
+              if (err) return rej({
+                message: "error saving friend's profile..."
+              });
+              user.save(function(err) {
+                if (err) return rej({
+                  message: "error saving user's profile..."
+                });
+                return res();
+              });
+            });
+
+          }, function(err) {
+            rej(err);
           });
 
         }, function(err) {
-          return rej(err);
+          rej(err);
         });
 
       })
     );
+  };
+
+  exports.removeFriend = function(userId, friendId) {
+
+
+    return (new Promise(function(res, rej) {
+      lookupUser(userId).then(function(user) {
+
+        var userFriendIndex = findFriendIndex(user.friends, friendId);
+
+        if (userFriendIndex === -1) return rej({
+          message: "But, u aren't friends with them :/"
+        });
+
+
+        lookupUser(friendId).then(function(friend) {
+
+          var friendFriendIndex = findFriendIndex(friend.friends, userId);
+
+          if (friendFriendIndex === -1) return rej({
+            message: "Friend doesn't have u added? :x"
+          });
+
+            user.friends.splice(userFriendIndex, 1);
+            user.markModified('friends');
+            user.friendCount--;
+
+            friend.friends.splice(friendFriendIndex, 1);
+            friend.markModified('friends');
+            friend.friendCount--;
+
+            friend.save(function(err) {
+              if (err) return rej({
+                message: "error saving friend's profile..."
+              });
+              user.save(function(err) {
+                if (err) return rej({
+                  message: "error saving user's profile..."
+                });
+                return res();
+              });
+            });          
+
+        }, function(err) {
+          rej(err);
+        });
+      }, function(err) {
+        rej(err);
+      });
+    }));
+
   };
 
   exports.addPlace = function(userId, place) {

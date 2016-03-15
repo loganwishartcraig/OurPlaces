@@ -6,7 +6,8 @@ $(document).ready(function() {
   var searchTextBox;
   var userInterface;
   var prefetchResults;
-
+  var notifications;
+  var setMessage;
 
   function initialize() {
 
@@ -22,11 +23,37 @@ $(document).ready(function() {
     // sets up predictive search
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
+    // binds controller to update notifications
+    notifications = new notificationController("#openMail");
+
     // sets up interface for user account
     userInterface = new UserInterface();
 
+    // used to centralize setting messages
+    setMessage = new messageService();
+
     // register global event handlers
     registerHandlers();
+
+  }
+
+  function messageService() {
+
+    this.requestSuccess = function() {
+
+      var node = $('#requestStatus');
+
+      node.text('Request Sent!');
+      setTimeout(function() {node.text('');}, 5000);
+
+    };
+
+    this.setGeneric = function(selector, text) {
+      var node = $(selector);
+
+      node.text(text);
+      setTimeout(function() {node.text('');}, 5000);
+    };
 
   }
 
@@ -59,9 +86,10 @@ $(document).ready(function() {
       $.post('/user/addRequest', {
         friendId: friendId
       }).success(function(msg) {
-        console.log(msg);
+        setMessage.requestSuccess();
       }).error(function(err) {
         console.log(err);
+        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
       });
 
     };
@@ -417,7 +445,6 @@ $(document).ready(function() {
         console.log("adding", toAdd);
         this.resultContainer.append(toAdd);
       }
-      // %
 
     };
 
@@ -443,6 +470,91 @@ $(document).ready(function() {
         if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) return this.set([]);
       }.bind(this));
     };
+  }
+
+  function notificationController(node) {
+
+    this.container = $(node);
+    this.requestContainer = $('.mail--items');
+
+    this.decrement = function() {
+      var countContainer = this.container.children('.mail--txt');
+      var count = parseInt(countContainer.text(), 10);
+      count--;
+      countContainer.text(count);
+      if (count === 0) {
+        this.toggleRequestVisibilty();
+        this.toggleActive();
+        this.requestContainer.prepend('<li><span>No Requets : /</span></li>');
+      }
+    };
+
+
+    // *************NEEDS ATTENTION***************
+    // - should allow for less dupe code in accept/reject
+    this.respond = function(destination, data) {
+
+      return (new Promise(function(res, rej) {
+        $.post(destination, data).success(function(msg) {
+          res(msg);
+        }).error(function(err) {
+          rej(err);
+        });
+      }));
+
+    };
+
+    this.getRequestId = function(evt) {
+      return $(evt.target).closest('li').attr('request-id');
+    };
+
+    this.removeRequestItem = function(evt) {
+      $(evt.target).closest('li').remove();
+    };
+
+    // *************NEEDS ATTENTION***************
+    this.accept = function(evt) {
+      var id = this.getRequestId(evt);
+      this.respond('/user/acceptRequest', {
+        friendId: id
+      }).then(function(msg) {
+        this.removeRequestItem(evt);
+        this.decrement();
+      }.bind(this), function(err) {
+        console.log(err);
+      });
+    };
+
+    // *************NEEDS ATTENTION***************
+    this.reject = function(evt) {
+      var id = this.getRequestId(evt);
+      this.respond('/user/removeRequest', {
+        friendId: id
+      }).then(function(msg) {
+        this.removeRequestItem(evt);
+        this.decrement();
+      }.bind(this), function(err) {
+        console.log(err);
+      });
+    };
+
+    this.toggleActive = function() {
+      this.container.children().each(function(index, item) {
+        var node = $(item);
+        if (node.hasClass('active')) {
+          node.removeClass('active');
+          node.addClass('inactive');
+        } else {
+          node.removeClass('inactive');
+          node.addClass('active');
+        }
+      });
+    };
+
+    this.toggleRequestVisibilty = function() {
+      this.requestContainer.toggleClass('hide');
+    };
+
   }
 
 
@@ -481,25 +593,20 @@ $(document).ready(function() {
   }
 
   function handleOpenMail(evt) {
-    $('.mail--items').toggleClass('hide');
+    notifications.toggleRequestVisibilty();
   }
 
 
   // *************NEEDS ATTENTION***************
-  // - generator or use bubbling
+  // - generator or use bubbling based on class
   function handleReqAccept(evt) {
-    var target = $(evt.target);
-    var id = $(target.parent()).attr('request-id');
-    console.log("accepting ", id);
-    $.post('/user/acceptRequest', {friendId: id}).success(function(msg) {
-      console.log(msg);
-    }).error(function(err) {
-      console.log(err);
-    });
+    notifications.accept(evt);
   }
 
+  // *************NEEDS ATTENTION***************
+  // - generator or use bubbling based on class
   function handleReqReject(evt) {
-
+    notifications.reject(evt);
   }
 
   // registers global event handlers
@@ -511,7 +618,8 @@ $(document).ready(function() {
     document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
     document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
     document.getElementById('openMail').addEventListener('click', handleOpenMail);
-  
+    document.getElementById('closeMail').addEventListener('click', handleOpenMail);
+
     // *************NEEDS ATTENTION***************
     $(".mail--btn.accept").click(handleReqAccept);
     $(".mail--btn.reject").click(handleReqReject);
