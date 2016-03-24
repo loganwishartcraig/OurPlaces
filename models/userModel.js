@@ -9,9 +9,9 @@ module.exports = mongoose.model('User', new Schema({
   lastName: String,
   friends: [{type: Schema.ObjectId, ref: 'User'}],
   friendCount: {type: Number, default: 0},
-  friendRequests: {type: Schema.Types.Mixed, default: {}},
+  friendRequests: {type: Array, default: []},
   requestCount: {type: Number, default: 0},
-  ownedPlaces: {type: Schema.Types.Mixed, default: {}},
-  friendsPlaces: {type: Schema.Types.Mixed, default: {}},
+  ownedPlaces: {type: Array, default: []},
+  friendsPlaces: {type: Array, default: []},
   dateCreated: {type: Date, default: Date.now}
 }));

@@ -32,18 +32,28 @@
         <div class="friend--container">
             <span class="friend--header">My Friends</span>
             <ul class="friend--list">
-              
+              {{#if user.friendCount}}
+              {{#each user.friends}}
+              <li class="friend--item">
+                <span class="friend--name">{{this.username}} | {{this.firstName}}</span><button class="friend--remove--btn" friend-id="{{this.userId}}">Delete</button>
+              </li>
+              {{/each}} {{else}}
+                <li class="friend--item">
+ <span class="friend--name empty">no friends yet :(</span>
+              </li>
+              {{/if}}
             </ul>
         </div>
         <div class="request--contianer">
           <div class="request--input--container">
-            <input class="request--input" type="text" name="friendId" placeholder="Friend ID">
+            <input id="addFriendInput" class="request--input" type="text" name="friendUsername" placeholder="Buddy Username">
             <button id="addFriendSubmit" class="request--btn">ADD</button>
             <span id="requestStatus" style="display: block; text-align: center; margin-top: .5rem; color: red; font-style: italic; font-size: .8rem"></span>
           </div>
         </div>
         <div class="account--container">
-          <span>{{user.firstName}}</span>
+          <span>{{user.firstName}}</span><br>
+          <span>{{user.username}}</span>
           <div class="mail--container">
           <div id="openMail" class="mail--notification">
             {{#if user.requestCount}}
@@ -73,7 +83,7 @@
         <ul class="mail--items hide">
         {{#if user.requestCount}}
             {{#each user.friendRequests}}
-              <li request-id="{{this.id}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
+              <li request-id="{{this.userId}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
             {{/each}}
         {{else}}
             <li><span>No Requests : /</span>

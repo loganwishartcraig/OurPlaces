@@ -69,11 +69,29 @@ button {
 /* friend container */
 .friend--container {
   margin: 1rem 0;
+  overflow: hidden;
 }
 
 .friend--header {
+  display: inline-block;
   border-bottom: 1px solid #f0ddfb;
+  margin-bottom: .5rem;
 }
+
+.friend--name {
+  display: block;
+  font-size: .85rem;
+  padding: .2rem 0;
+  padding-left: .5rem;
+  text-align: left;
+}
+
+.friend--name.empty {
+  color: grey;
+  text-align: center;
+  padding: 0;
+}
+
 
 /* request container */
 

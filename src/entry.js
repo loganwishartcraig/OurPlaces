@@ -11,6 +11,10 @@ $(document).ready(function() {
 
   function initialize() {
 
+
+    // sets up interface for user account
+    userInterface = new UserInterface();
+
     // Load google map on element w/ id 'map'
     map = new MapArea("map");
 
@@ -25,9 +29,6 @@ $(document).ready(function() {
 
     // binds controller to update notifications
     notifications = new notificationController("#openMail");
-
-    // sets up interface for user account
-    userInterface = new UserInterface();
 
     // used to centralize setting messages
     setMessage = new messageService();
@@ -44,7 +45,9 @@ $(document).ready(function() {
       var node = $('#requestStatus');
 
       node.text('Request Sent!');
-      setTimeout(function() {node.text('');}, 5000);
+      setTimeout(function() {
+        node.text('');
+      }, 5000);
 
     };
 
@@ -52,7 +55,9 @@ $(document).ready(function() {
       var node = $(selector);
 
       node.text(text);
-      setTimeout(function() {node.text('');}, 5000);
+      setTimeout(function() {
+        node.text('');
+      }, 5000);
     };
 
   }
@@ -63,6 +68,7 @@ $(document).ready(function() {
       $.get('/user/getUser').success(function(data) {
         console.log('got user', data);
         this.user = data;
+        this.registerPlaces();
       }.bind(this)).error(function(err) {
         console.log(err);
       }.bind(this));
@@ -81,10 +87,10 @@ $(document).ready(function() {
       this.user.ownedPlaces[place.place_id] = place;
     };
 
-    this.addFriend = function(friendId) {
+    this.sendRequest = function(friendUsername) {
 
       $.post('/user/addRequest', {
-        friendId: friendId
+        friendUsername: friendUsername
       }).success(function(msg) {
         setMessage.requestSuccess();
       }).error(function(err) {
@@ -94,7 +100,20 @@ $(document).ready(function() {
 
     };
 
-    this.removeFriend = function(friend) {
+    this.getUserId = function() {
+      return this.user.id;
+    };
+
+    this.removeFriend = function(friendId) {
+
+      $.post('/user/removeFriend', {
+        friendId: friendId
+      }).success(function(msg) {
+        setMessage.setGeneric('#requestStatus', 'Friend Deleted :(');
+      }).error(function(err) {
+        console.log(err);
+        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
+      });
 
     };
 
@@ -105,6 +124,7 @@ $(document).ready(function() {
 
       var toReturn = [];
 
+      console.log(this.user);
       Object.keys(this.user.ownedPlaces).forEach(function(item, index) {
         toReturn.push(this.user.ownedPlaces[item]);
       }.bind(this));
@@ -124,6 +144,21 @@ $(document).ready(function() {
       return toReturn;
     };
 
+    this.getAllPlaces = function() {
+      return this.getMyPlaces().concat(this.getFriendPlaces());
+
+    };
+
+    this.registerPlaces = function() {
+
+      var toPlot = this.getAllPlaces();
+
+      for (var i = 0; i < toPlot.length; i++) {
+        map.placeMarker(toPlot[i], null);
+      }
+
+    };
+
     this.init();
 
   }
@@ -135,13 +170,18 @@ $(document).ready(function() {
     // initalize connection with google places + set relevant map
     this.placeServiceConn = new google.maps.places.PlacesService(map);
 
+    this.map = map;
+
     // *************NEEDS ATTENTION***************
     // - should be more flexible, location should not be static.
     // function for building basic search requests
     this.buildSearchRequest = function(keyword) {
+      var lat = this.map.getCenter().lat();
+      var lng = this.map.getCenter().lng();
+      console.log(lat, lng);
       return ({
-        location: new google.maps.LatLng(-33.8665, 151.1956),
-        radius: '500',
+        location: new google.maps.LatLng(lat, lng),
+        radius: '1500',
         keyword: keyword
       });
     };
@@ -315,22 +355,44 @@ $(document).ready(function() {
 
   function MapArea(ID) {
 
-    this.mapContainer = document.getElementById(ID);
+    this.init = function() {
+      this.mapContainer = document.getElementById(ID);
 
-    // set starting point for map
-    this.pyrmont = new google.maps.LatLng(-33.8665, 151.1956);
+      // set fallback starting point for map
+      this.fallbackStartLatLng = new google.maps.LatLng(34.024457, -118.445977);
 
-    // create new map on global variable
-    this.map = new google.maps.Map(this.mapContainer, {
-      center: this.pyrmont,
-      zoom: 15,
-      scrollwheel: true,
-      disableDefaultUI: false,
-      mapTypeControl: true
+      // create new map on global variable
+      this.map = new google.maps.Map(this.mapContainer, {
+        center: new google.maps.LatLng(0, 0),
+        zoom: 1,
+        scrollwheel: true,
+        disableDefaultUI: false,
+        mapTypeControl: false
+      });
 
-    });
+      this.activeMarkers = [];
 
-    this.generateMarker = function(place) {
+      // pulled from google map docs
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          this.map.setCenter(initialLocation);
+          this.map.setZoom(15);
+        }.bind(this), function() {
+          console.error("FAILED TO INIT GEOLOCATION SERVICE");
+          this.map.setCenter(this.fallbackStartLatLng);
+          this.map.setZoom(15);
+        }.bind(this));
+      }
+      else {
+        console.error("BROWSER DOESN'T SUPPORT GEO LOCATION");
+        this.map.setCenter(this.fallbackStartLatLng);
+        this.map.setZoom(15);
+      }
+
+    };
+
+    this.generateMarker = function(place, map) {
       return (new google.maps.Marker({
         map: this.map,
         position: place.geometry.location,
@@ -338,26 +400,60 @@ $(document).ready(function() {
       }));
     };
 
-    this.placeMarker = function(place) {
-      var marker = this.generateMarker(place);
+    this.placeMarker = function(place, map) {
+      var marker = this.generateMarker(place, map);
+
       var infoPane = new infoWindow(this.map, place, marker);
       marker.addListener('click', function() {
         infoPane.toggleOpen();
       });
     }.bind(this);
 
+    this.setMapOnAll = function(map, filter) {
+      filter = filter || function(item) {
+        return true;
+      };
+      for (var i = 0; i < this.activeMarkers.length; i++) {
+        if (filter(this.activeMarkers[i])) {
+          activeMarkers[i].map = map;
+        }
+      }
+    };
+
+    this.clearMarkers = function() {
+      this.setMapOnAll(null);
+      this.activeMarkers = [];
+    };
+
+    this.hideMarkers = function(filter) {
+      this.setMapOnAll(null, filter);
+    };
+
+    this.showMarkers = function(filter) {
+      this.setMapOnAll(this.map, filter);
+    };
+
+    this.clearSearchMarkers = function() {
+      var filter = function(item) {
+        if (item.setBySearch === true) return true;
+      };
+      this.setMapOnAll(null, filter);
+    };
 
     // *************NEEDS ATTENTION***************
     // - shouldn't be requiring a google status.
     this.plotPlaces = function(res, status) {
-      console.log(res, status);
       // proceed only if succeeded
       if (status == google.maps.places.PlacesServiceStatus.OK) {
         // make a marker for each result
         for (var i = 0; i < res.length; i++) {
-          this.placeMarker(res[i]);
+          this.placeMarker(res[i], this.map);
         }
       }
+    }.bind(this);
+
+    this.plotSearchRes = function(place) {
+      this.placeMarker(place, this.map);
     }.bind(this);
 
     this.execNearbySearch = function(searchTerm) {
@@ -366,7 +462,7 @@ $(document).ready(function() {
     };
 
     this.execSearchById = function(placeId) {
-      searchServices.placeDetails(placeId, this.placeMarker);
+      searchServices.placeDetails(placeId, this.plotSearchRes);
     };
 
 
@@ -375,12 +471,10 @@ $(document).ready(function() {
     // - need to create some sort of internally managed array to keep track
     //   of markers so they can be toggled.
     this.plotMyPlaces = function() {
-      var myPlaces = userInterface.getMyPlaces();
-
-      for (var i = 0; i < Object.keys(myPlaces).length; i++) {
-        this.placeMarker(myPlaces[i]);
-      }
-
+      var myId = userInterface.getUserId();
+      this.showMarkers(function(place) {
+        return (place.placeOwner === myId) ? true : false;
+      });
     };
 
     // *************NEEDS ATTENTION***************
@@ -392,6 +486,8 @@ $(document).ready(function() {
         this.placeMarker(myPlaces[i]);
       }
     };
+
+    this.init();
 
   }
 
@@ -575,12 +671,14 @@ $(document).ready(function() {
 
   function handleRequestSubmit(evt) {
 
-    var friendId = $('.request--input').val();
+    if ((!evt.keyCode) || (evt.keyCode === 13)) {
 
-    if (!friendId) return console.error('No Friend ID was entered');
+      var friendUsername = $('.request--input').val();
 
-    userInterface.addFriend(friendId);
+      if (!friendUsername) return setMessage.setGeneric('#requestStatus', 'No Friend username?');
 
+      userInterface.sendRequest(friendUsername);
+    }
   }
 
 
@@ -597,6 +695,7 @@ $(document).ready(function() {
   }
 
 
+
   // *************NEEDS ATTENTION***************
   // - generator or use bubbling based on class
   function handleReqAccept(evt) {
@@ -609,11 +708,16 @@ $(document).ready(function() {
     notifications.reject(evt);
   }
 
+  function handleRemoveFriend(evt) {
+    userInterface.removeFriend($(evt.target).attr('friend-id'));
+  }
+
   // registers global event handlers
   function registerHandlers() {
     // search submit button => excecute search
     document.getElementById('placesSearchSubmit').addEventListener('click', handleSearchSubmit);
     document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
+    document.getElementById('addFriendInput').addEventListener('keyup', handleRequestSubmit);
     document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
     document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
     document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
@@ -621,6 +725,7 @@ $(document).ready(function() {
     document.getElementById('closeMail').addEventListener('click', handleOpenMail);
 
     // *************NEEDS ATTENTION***************
+    $(".friend--remove--btn").click(handleRemoveFriend);
     $(".mail--btn.accept").click(handleReqAccept);
     $(".mail--btn.reject").click(handleReqReject);
   }

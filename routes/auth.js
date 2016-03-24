@@ -20,9 +20,9 @@ router.get('/google/cb',
   function(req, res) {
 
     userService.findOrCreate(req.user, function(err, user) {
-      console.log(user, user.username);
+      if(err) res.redirect('/err');
       if (!user.username) {
-        res.redirect('/user/setUsername');
+        res.redirect('/user/setCredentials');
       } else {
         res.redirect('/');
       }
