@@ -10,12 +10,17 @@ router.get('/setCredentials', verifyAuth, function(req, res) {
 
 });
 
-router.post('/setCredentials', verifyAuth, function(req, res) {
+router.post('/setCredentials', verifyAuth, function(req, res, next) {
 
+  if (req.body.username === 'SEARCH_SVC') {
+    res.status(400).json({message: "Ur trying to use a reserved username :s"})
+    return next();
+  }
+  
   userService.setUsername(req.user.id, req.body.username).then(function(msg) {
     res.redirect('/home');
   }, function(err) {
-    res.json(err);
+    res.status(500).json(err);
   });
 
 });

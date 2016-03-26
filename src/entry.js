@@ -181,7 +181,7 @@ $(document).ready(function() {
       console.log(lat, lng);
       return ({
         location: new google.maps.LatLng(lat, lng),
-        radius: '1500',
+        radius: '1200',
         keyword: keyword
       });
     };
@@ -364,7 +364,7 @@ $(document).ready(function() {
       // create new map on global variable
       this.map = new google.maps.Map(this.mapContainer, {
         center: new google.maps.LatLng(0, 0),
-        zoom: 1,
+        zoom: 2,
         scrollwheel: true,
         disableDefaultUI: false,
         mapTypeControl: false
@@ -399,30 +399,35 @@ $(document).ready(function() {
         title: place.name
       }));
     };
-
-    this.placeMarker = function(place, map) {
+    
+    this.placeMarker = function(place, map, setBy) {
+      console.log('PLACING MARKER')
       var marker = this.generateMarker(place, map);
-
+          marker.setBy = setBy;
       var infoPane = new infoWindow(this.map, place, marker);
       marker.addListener('click', function() {
         infoPane.toggleOpen();
       });
+      this.activeMarkers.push(marker);
     }.bind(this);
-
+    
     this.setMapOnAll = function(map, filter) {
       filter = filter || function(item) {
         return true;
       };
       for (var i = 0; i < this.activeMarkers.length; i++) {
         if (filter(this.activeMarkers[i])) {
-          activeMarkers[i].map = map;
+          this.activeMarkers[i].setMap(map);
         }
       }
     };
 
-    this.clearMarkers = function() {
-      this.setMapOnAll(null);
-      this.activeMarkers = [];
+    this.clearMarkers = function(filter) {
+      console.log('CLEARING MAKRERS');
+      this.setMapOnAll(null, filter);
+      this.activeMarkers = this.activeMarkers.reduce(function(cur, marker) {
+        return (filter(marker)) ? cur : cur.concat(marker);
+      }, []);
     };
 
     this.hideMarkers = function(filter) {
@@ -433,59 +438,43 @@ $(document).ready(function() {
       this.setMapOnAll(this.map, filter);
     };
 
-    this.clearSearchMarkers = function() {
-      var filter = function(item) {
-        if (item.setBySearch === true) return true;
-      };
-      this.setMapOnAll(null, filter);
-    };
-
-    // *************NEEDS ATTENTION***************
-    // - shouldn't be requiring a google status.
-    this.plotPlaces = function(res, status) {
-      // proceed only if succeeded
-      if (status == google.maps.places.PlacesServiceStatus.OK) {
-        // make a marker for each result
-        for (var i = 0; i < res.length; i++) {
-          this.placeMarker(res[i], this.map);
-        }
+    this.plotPlaces = function(res, setBy) {
+      for (var i = 0; i < res.length; i++) {
+        this.placeMarker(res[i], this.map, setBy);
       }
+      console.log(this.activeMarkers)
     }.bind(this);
 
-    this.plotSearchRes = function(place) {
-      this.placeMarker(place, this.map);
-    }.bind(this);
+//     this.execNearbySearch = function(searchTerm) {
+//       console.log("executing search");
+//       searchServices.nearbySearch(searchTerm, this.plotPlaces);
+//     };
 
-    this.execNearbySearch = function(searchTerm) {
-      console.log("executing search");
-      searchServices.nearbySearch(searchTerm, this.plotPlaces);
-    };
-
-    this.execSearchById = function(placeId) {
-      searchServices.placeDetails(placeId, this.plotSearchRes);
-    };
+//     this.execSearchById = function(placeId) {
+//       searchServices.placeDetails(placeId, this.plotSearchRes);
+//     };
 
 
     // *************NEEDS ATTENTION***************
     // - GENERATORS.
     // - need to create some sort of internally managed array to keep track
     //   of markers so they can be toggled.
-    this.plotMyPlaces = function() {
-      var myId = userInterface.getUserId();
-      this.showMarkers(function(place) {
-        return (place.placeOwner === myId) ? true : false;
-      });
-    };
+//     this.plotMyPlaces = function() {
+//       var myId = userInterface.getUserId();
+//       this.showMarkers(function(place) {
+//         return (place.placeOwner === myId) ? true : false;
+//       });
+//     };
 
     // *************NEEDS ATTENTION***************
     // - GENERATORS.
-    this.plotFriendPlaces = function() {
-      var myPlaces = userInterface.getFriendPlaces();
+//     this.plotFriendPlaces = function() {
+//       var myPlaces = userInterface.getFriendPlaces();
 
-      for (var i = 0; i < Object.keys(myPlaces).length; i++) {
-        this.placeMarker(myPlaces[i]);
-      }
-    };
+//       for (var i = 0; i < Object.keys(myPlaces).length; i++) {
+//         this.placeMarker(myPlaces[i]);
+//       }
+//     };
 
     this.init();
 
@@ -660,7 +649,17 @@ $(document).ready(function() {
 
   function handleSearchInput(evt) {
 
-    if (evt.keyCode === 13) return map.execNearbySearch(searchTextBox.getInput());
+    if (evt.keyCode === 13) {
+      searchServices.nearbySearch(searchTextBox.getInput(), function(res, status) {
+        if (status == google.maps.places.PlacesServiceStatus.OK) {
+          
+          map.clearMarkers(function(marker) {return (marker.setBy === 'SEARCH_SVC') ? true : false})
+          map.plotPlaces(res, 'SEARCH_SVC');
+                    
+        }
+      })
+      return;
+    }
 
     if (searchTextBox.length() === 0) return prefetchResults.clear();
     if (searchTextBox.length() >= 4) return prefetchResults.fetch(searchTextBox.getInput());
