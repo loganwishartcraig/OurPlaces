@@ -25,8 +25,8 @@ function userIdCompare(data, term) {
 }
 
 function placeCompare(data, term) {
-  var id = parseInt(data.place_id, 10);
-  term = parseInt(term.place_id, 10);
+  var id = data.place_id;
+  term = term.place_id;
   if (id === term) return 0;
   else if (id > term) return 1;
   else return -1;
@@ -287,12 +287,12 @@ exports.addFriend = function(userId, friendId) {
           user.markModified('friendRequests');
           user.requestCount--;
 
-          user.friends.push(friend);
+          user.friends = binary.insert(user.friends, friend, userIdCompare);
+          user.markModified('friends');
           user.friendCount++;
 
-          user.markModified('friends');
 
-          friend.friends.push(user);
+          friend.friends = binary.insert(friend.friends, user, userIdCompare);
           friend.markModified('friends');
           friend.friendCount++;
 
@@ -325,6 +325,7 @@ exports.removeFriend = function(userId, friendId) {
 
   return (new Promise(function(res, rej) {
     lookupUser({ userId: userId }).then(function(user) {
+      console.log(friendId);
 
       var userFriendIndex = binary.indexOf(user.friends, {userId: friendId}, userIdCompare);
 
@@ -381,25 +382,26 @@ exports.addPlace = function(userId, place) {
       lookupUser({ userId: userId }).then(function(user) {
 
         console.log("\tsaving ", user.ownedPlaces);
-        // if (findPlaceIndex(user.ownedPlaces, placeId) !== -1) return rej({
-        //   message: "Place is already saved :o"
-        // });
-        if (user.ownedPlaces.hasOwnProperty(place.place_id)) return rej({
+
+        if (binary.exists(user.ownedPlaces, {place_id: place.place_id}, placeCompare)) return rej({
           message: "Place is already saved :o"
         });
+
         console.log('\tplace not already there');
 
         place.placeOwner = userId;
-        user.ownedPlaces[place.place_id] = place;
+
+        user.ownedPlaces = binary.insert(user.ownedPlaces, place, placeCompare);
+        // user.ownedPlaces[place.place_id] = place;
         user.markModified('ownedPlaces');
 
         console.log('\ttrying to save');
         // A named function should replace the user.save callback
-        user.save(function(err) {
+        user.save(function(err, user) {
           if (err) return rej({
             message: "Error saving user"
           });
-          else return res();
+          else return res(user.ownedPlaces);
         });
 
       }, function(err) {
@@ -422,21 +424,24 @@ exports.removePlace = function(userId, place) {
         // if (findPlaceIndex(user.ownedPlaces, placeId) !== -1) return rej({
         //   message: "Place is already saved :o"
         // });
-        if (!user.ownedPlaces.hasOwnProperty(place.place_id)) return rej({
+
+        var placeIndex = binary.indexOf(user.ownedPlaces, {place_id: place.place_id}, placeCompare);
+
+        if (placeIndex < 0) return rej({
           message: "Place was not already saved :o"
         });
         console.log('\tplace is there');
 
-        delete user.ownedPlaces[place.place_id];
+        user.ownedPlaces.splice(placeIndex, 1);
         user.markModified('ownedPlaces');
 
         console.log('\ttrying to save');
         // A named function should replace the user.save callback
-        user.save(function(err) {
+        user.save(function(err, user) {
           if (err) return rej({
             message: "Error saving user"
           });
-          else return res();
+          else return res(user.ownedPlaces);
         });
 
       }, function(err) {

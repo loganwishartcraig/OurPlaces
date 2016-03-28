@@ -35,7 +35,7 @@
               {{#if user.friendCount}}
               {{#each user.friends}}
               <li class="friend--item">
-                <span class="friend--name">{{this.username}} | {{this.firstName}}</span><button class="friend--remove--btn" friend-id="{{this.userId}}">Delete</button>
+                <span class="friend--name">{{this.username}} | {{this.firstName}}</span><button class="friend--remove--btn" friend_id="{{this.userId}}">Delete</button>
               </li>
               {{/each}} {{else}}
                 <li class="friend--item">
@@ -53,7 +53,7 @@
         </div>
         <div class="account--container">
           <span>{{user.firstName}}</span><br>
-          <span>{{user.username}}</span>
+          <span id="username">{{user.username}}</span>
           <div class="mail--container">
           <div id="openMail" class="mail--notification">
             {{#if user.requestCount}}
@@ -80,15 +80,15 @@
           </div>
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>
-        <ul class="mail--items hide">
+        <ul id="notifications" class="mail--items hide">
         {{#if user.requestCount}}
             {{#each user.friendRequests}}
-              <li request-id="{{this.userId}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
+              <li request_id="{{this.userId}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div friend_id="{{this.userId}}" class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
             {{/each}}
         {{else}}
             <li><span>No Requests : /</span>
         {{/if}}
-            <li id="closeMail"><span>Close</span></li>
+            <li id="closeMail"><button>Close</button></li>
             </ul>
         <div id="map" class="map">
         </div>

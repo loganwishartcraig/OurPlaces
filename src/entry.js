@@ -11,6 +11,8 @@ $(document).ready(function() {
 
   function initialize() {
 
+    // used to centralize setting messages
+    setMessage = new messageService();
 
     // sets up interface for user account
     userInterface = new UserInterface();
@@ -22,16 +24,13 @@ $(document).ready(function() {
     searchServices = new SearchServices(map.map);
 
     // binds a textbox class to search box
-    searchTextBox = new TextBox("#placeSearchInput");
+    searchTextBox = $("#placeSearchInput");
 
     // sets up predictive search
     prefetchResults = new PrefetchResults("#predictiveContainer");
 
     // binds controller to update notifications
-    notifications = new notificationController("#openMail");
-
-    // used to centralize setting messages
-    setMessage = new messageService();
+    notifications = new notificationController("#notifications");
 
     // register global event handlers
     registerHandlers();
@@ -39,17 +38,6 @@ $(document).ready(function() {
   }
 
   function messageService() {
-
-    this.requestSuccess = function() {
-
-      var node = $('#requestStatus');
-
-      node.text('Request Sent!');
-      setTimeout(function() {
-        node.text('');
-      }, 5000);
-
-    };
 
     this.setGeneric = function(selector, text) {
       var node = $(selector);
@@ -60,6 +48,10 @@ $(document).ready(function() {
       }, 5000);
     };
 
+    this.setConsole = function(data) {
+      console.log(data);
+    };
+
   }
 
   function UserInterface() {
@@ -68,35 +60,71 @@ $(document).ready(function() {
       $.get('/user/getUser').success(function(data) {
         console.log('got user', data);
         this.user = data;
-        this.registerPlaces();
-      }.bind(this)).error(function(err) {
-        console.log(err);
-      }.bind(this));
+      }.bind(this)).error(setMessage.setConsole);
     };
 
     this.hasPlace = function(place_id) {
-      console.log(place_id, this.user.ownedPlaces.hasOwnProperty(place_id));
-      return this.user.ownedPlaces.hasOwnProperty(place_id);
+
+      for (var i = 0; i < this.user.ownedPlaces.length; i++) {
+        if (this.user.ownedPlaces[i].place_id === place_id) return true;
+      }
+
+      return false;
+
     };
 
     this.removePlace = function(placeId) {
       delete this.user.ownedPlaces[placeId];
     };
 
-    this.addPlace = function(place) {
-      this.user.ownedPlaces[place.place_id] = place;
+    this.savePlace = function(place) {
+
+      return (new Promise(function(res, rej) {
+        console.log('user interface is saving ', place);
+
+        $.post('/user/addPlace', {
+          place: JSON.stringify(place)
+        }).success(function(data) {
+          this.user.ownedPlaces = data.ownedPlaces;
+          res(data);
+        }.bind(this)).error(function(err) {
+          rej(err);
+        });
+
+      }.bind(this)));
     };
+
+    this.removePlace = function(place) {
+
+      return (new Promise(function(res, rej) {
+        console.log('user interface is removing ', place);
+
+        $.post('/user/removePlace', {
+          place: JSON.stringify(place)
+        }).success(function(data) {
+          this.user.ownedPlaces = data.ownedPlaces;
+          res(data);
+        }.bind(this)).error(function(err) {
+          rej(err);
+        });
+
+      }.bind(this)));
+    };
+
 
     this.sendRequest = function(friendUsername) {
 
-      $.post('/user/addRequest', {
-        friendUsername: friendUsername
-      }).success(function(msg) {
-        setMessage.requestSuccess();
-      }).error(function(err) {
-        console.log(err);
-        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
-      });
+      return (new Promise(function(res, rej) {
+
+        $.post('/user/addRequest', {
+          friendUsername: friendUsername
+        }).success(function(msg) {
+          res(msg);
+        }).error(function(err) {
+          rej(err);
+        });
+
+      }));
 
     };
 
@@ -104,59 +132,52 @@ $(document).ready(function() {
       return this.user.id;
     };
 
+
     this.removeFriend = function(friendId) {
 
-      $.post('/user/removeFriend', {
-        friendId: friendId
-      }).success(function(msg) {
-        setMessage.setGeneric('#requestStatus', 'Friend Deleted :(');
-      }).error(function(err) {
-        console.log(err);
-        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
-      });
+
+      return (new Promise(function(res, rej) {
+
+        $.post('/user/removeFriend', {
+          friendId: friendId
+        }).success(function(msg) {
+          res(msg);
+        }).error(function(err) {
+          rej(err);
+        });
+
+      }));
+
 
     };
 
+    this.acceptRequest = function(friendId) {
 
-    // *************NEEDS ATTENTION***************
-    // - should be refactored into a 'get x' generator
-    this.getMyPlaces = function() {
+      return (new Promise(function(res, rej) {
 
-      var toReturn = [];
+        $.post('/user/acceptRequest', {
+          friendId: friendId
+        }).success(function(msg) {
+          res(msg);
+        }).error(function(err) {
+          rej(err);
+        });
 
-      console.log(this.user);
-      Object.keys(this.user.ownedPlaces).forEach(function(item, index) {
-        toReturn.push(this.user.ownedPlaces[item]);
-      }.bind(this));
-
-      return toReturn;
+      }));
     };
 
-    // *************NEEDS ATTENTION***************
-    // - should be refactored into a 'get x' generator
-    this.getFriendPlaces = function() {
-      var toReturn = [];
+    this.rejectRequest = function(friendId) {
+      return (new Promise(function(res, rej) {
 
-      Object.keys(this.user.friendsPlaces).forEach(function(item, index) {
-        toReturn.push(this.user.friendsPlaces[item]);
-      }.bind(this));
+        $.post('/user/removeRequest', {
+          friendId: friendId
+        }).success(function(msg) {
+          res(msg);
+        }).error(function(err) {
+          rej(err);
+        });
 
-      return toReturn;
-    };
-
-    this.getAllPlaces = function() {
-      return this.getMyPlaces().concat(this.getFriendPlaces());
-
-    };
-
-    this.registerPlaces = function() {
-
-      var toPlot = this.getAllPlaces();
-
-      for (var i = 0; i < toPlot.length; i++) {
-        map.placeMarker(toPlot[i], null);
-      }
-
+      }));
     };
 
     this.init();
@@ -172,8 +193,6 @@ $(document).ready(function() {
 
     this.map = map;
 
-    // *************NEEDS ATTENTION***************
-    // - should be more flexible, location should not be static.
     // function for building basic search requests
     this.buildSearchRequest = function(keyword) {
       var lat = this.map.getCenter().lat();
@@ -187,171 +206,151 @@ $(document).ready(function() {
     };
 
     // executes a nearby search + calls the callback provided
-    this.nearbySearch = function(keyword, cb) {
-      var req = this.buildSearchRequest(keyword);
-      this.placeServiceConn.nearbySearch(req, cb);
-    }.bind(this);
+    this.nearbySearch = function(keyword) {
 
-    // executes a place detail search + calls callback
-    this.placeDetails = function(placeId, cb) {
-      var req = {
-        placeId: placeId
-      };
-      this.placeServiceConn.getDetails(req, cb);
-    }.bind(this);
+
+      var req = this.buildSearchRequest(keyword);
+      return (new Promise(function(res, rej) {
+        this.placeServiceConn.nearbySearch(req, function(data, status) {
+          console.log('search results :', data, status);
+          if ((status === google.maps.places.PlacesServiceStatus.OK) || (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS)) {
+            res(data);
+          } else {
+            rej(data);
+          }
+        });
+      }.bind(this)));
+    };
+
 
   }
 
-  // class that manages info windows
-  function infoWindow(map, place, marker) {
 
-    // set references to relevant map items
+  function InfoWindow(map) {
+
+
     this.map = map;
-    this.place = place;
-    this.marker = marker;
+
+    this.pane = new google.maps.InfoWindow();
+
+    this.lastOpen = null;
 
     this.classes = {
-      save: 'save--place',
-      remove: 'remove--place'
-    };
-
-    // set class name + template for HTML
-    this.mainTemplate = '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>';
-    this.btnTemplate = '<button class="{{BTN_CLASS}}" place_id="{{PLACE_ID}}">{{BTN_TEXT}}</button>';
-
-    // set initial 'open' state
-    this.open = false;
-
-
-    // *************NEEDS ATTENTION***************
-    // - probably a better way to build the template?
-    this.buildActionBtn = function(place) {
-      console.log('checking if saved...', userInterface.hasPlace(place.place_id));
-      if (userInterface.hasPlace(place.place_id)) {
-        return (this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.remove).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Remove Place'));
-      } else {
-        return (this.btnTemplate.replace("{{BTN_CLASS}}", this.classes.save).replace("{{PLACE_ID}}", place.place_id).replace("{{BTN_TEXT}}", 'Save Place'));
+      actionBtn: {
+        main: 'save--place--btn',
+        save: 'save',
+        remove: 'remove'
       }
     };
 
-    // function for formatting the template into useable HTML string
+    this.templates = {
+      actionBtn: {
+        save: '<button class="{{BTN_CLASS_MAIN}} {{BTN_CLASS_ACTION}}" place_id="{{PLACE_ID}}">Save</button>',
+        remove: '<button class="{{BTN_CLASS_MAIN}} {{BTN_CLASS_ACTION}}" place_id="{{PLACE_ID}}">Remove</button>'
+      },
+      mainContainer: '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>'
+    };
+
+    this.buildActionButton = function(place) {
+      // WHERE SHOULD THIS CHECK BE? Should a 'savedPlace' flag be set on 'place'? Should 'marker' be passed with a flag? 
+      if (userInterface.hasPlace(place.place_id)) {
+        return this.templates.actionBtn.remove.replace('{{BTN_CLASS_MAIN}}', this.classes.actionBtn.main).replace('{{BTN_CLASS_ACTION}}', this.classes.actionBtn.remove);
+      } else {
+        return this.templates.actionBtn.save.replace('{{BTN_CLASS_MAIN}}', this.classes.actionBtn.main).replace('{{BTN_CLASS_ACTION}}', this.classes.actionBtn.save);
+      }
+    };
+
     this.buildInfoWindow = function(place) {
 
-      var btn = this.buildActionBtn(place);
+      var button = this.buildActionButton(place);
 
-      var contentString = this.mainTemplate.replace("{{PLACE_ID}}", place.place_id)
+      var contentString = this.templates.mainContainer
+        .replace("{{ACTION_BTN}}", button)
         .replace("{{PLACE_NAME}}", place.name)
-        .replace("{{ACTION_BTN}}", btn);
+        .replace("{{PLACE_ID}}", place.place_id);
 
       return contentString;
 
     };
 
-    this.rebuildInfoContent = function(place) {
-      this.pane.setContent(this.buildInfoWindow(place));
+    this.refreshActionButton = function(node, place) {
+      var btn = $(this.buildActionButton(place));
+      btn.on('click', this.generateActionClickHandler(place));
+      node.replaceWith(btn);
     };
 
-    // *************NEEDS ATTENTION***************
-    // - could potentially use generators again here?
-    // - maybe abstract out the success/error funcitons
-    // function used when 'save place' button is clicked.
-    // Posts place information to server & handles response
-    this.savePlace = function(place) {
-      console.log('saving! ' + place);
-      var data = JSON.stringify(place);
-      $.post('/user/addPlace', {
-        place: data
-      }).success(function(msg) {
-        // on success, log message
-        console.log(msg);
-        userInterface.addPlace(place);
-        this.rebuildInfoContent(place);
-      }.bind(this)).error(function(err) {
-        // on error, log error
-        console.log(err);
-      });
-    };
+    this.handleActionClick = function(evt, place) {
 
-    // *************NEEDS ATTENTION***************
-    // - could potentially use generators again here?
-    // - maybe abstract out the success/error funcitons
-    this.removePlace = function(place) {
-      console.log('removing! ' + JSON.stringify(place));
-      var data = JSON.stringify(place);
-      $.post('/user/removePlace', {
-        place: data
-      }).success(function(msg) {
-        // on success, log message
-        console.log(msg);
-        userInterface.removePlace(place.place_id);
-        this.rebuildInfoContent(place);
-      }.bind(this)).error(function(err) {
-        // on error, log error
-        console.log(err);
-      });
-    };
+      console.log('action button clicked ', evt);
+      var node = $(evt.target);
+      var place_id = node.attr('place_id');
+      if (node.hasClass('save')) {
+        userInterface.savePlace(place).then(function(msg) {
 
-    // *************NEEDS ATTENTION***************
-    // - again, maybe use generators, seems like lots of duplicated code
-    // - should abstract out setting the event/handler?
-    // Attaches a click event to the 'save place' button
-    // Only executed after info window becomes accessable through DOM. 
-    // Passes place info to 'savePlace' function
-    this.registerSaveHandler = function(place) {
+          this.refreshActionButton(node, place);
 
-      var query;
+          console.log('success! place saved!', msg);
 
-      if (userInterface.hasPlace(place.place_id)) {
-        // finds element through class name + place_id attr selector
-        query = '.' + this.classes.remove + "[place_id='" + place.place_id + "']";
-
-        $(query).on('click', function() {
-          this.removePlace(place);
-        }.bind(this));
+        }.bind(this), setMessage.setConsole);
       } else {
 
-        query = '.' + this.classes.save + "[place_id='" + place.place_id + "']";
+        userInterface.removePlace(place).then(function(msg) {
 
-        $(query).on('click', function() {
-          this.savePlace(place);
-        }.bind(this));
+          this.refreshActionButton(node, place);
+
+          console.log('success! place removed!', msg);
+
+        }.bind(this), setMessage.setConsole);
+
       }
-
     };
 
+    this.generateActionClickHandler = function(place) {
+      return (function(evt) {
 
-    // Builds the actual info window and sets 'domready'
-    // function that registers a save handler for place when
-    // content is DOM accessable
-    this.setInfoWindow = function(place) {
+        this.handleActionClick(evt, place);
 
-      this.pane = new google.maps.InfoWindow({
-        content: this.buildInfoWindow(place),
-      });
-
-      // only try to register save handler when content is ready
-      google.maps.event.addListener(this.pane, 'domready', function() {
-        this.registerSaveHandler(place);
       }.bind(this));
     };
 
-    // function for toggling the window's visability.
-    // sets map and location for window.
-    this.toggleOpen = function() {
-      // could be formatted nicer.
-      if (this.open) {
-        this.pane.close(this.map, this.marker);
-      } else {
-        this.pane.open(this.map, this.marker);
-      }
-      this.open = !this.open;
+    this.createHandler = function(place) {
+
+      console.log('configuring click handler...');
+
+      return (function() {
+        var query = '.' + this.classes.actionBtn.main + "[place_id='" + place.place_id + "']";
+        var node = $(query);
+        $(node).on('click', this.generateActionClickHandler(place));
+      }.bind(this));
+
     };
 
-    // set the info window when opened
-    this.setInfoWindow(this.place);
+    // rather have this just take 'position' instead of 'marker' object?
+    this.openPane = function(place, marker) {
+
+      if ((this.open) && (this.lastOpen == place.place_id)) return this.closePane();
+
+      console.log('Opening pane');
+
+      var content = this.buildInfoWindow(place);
+
+      this.pane.setContent(content);
+      this.pane.open(this.map, marker);
+      google.maps.event.addListener(this.pane, 'domready', this.createHandler(place));
+
+      this.lastOpen = place.place_id;
+      this.open = true;
+
+      console.log(this.pane);
+
+    };
+
+    this.closePane = function() {
+      this.open = false;
+      this.pane.close();
+    };
 
   }
-
 
   function MapArea(ID) {
 
@@ -383,12 +382,13 @@ $(document).ready(function() {
           this.map.setCenter(this.fallbackStartLatLng);
           this.map.setZoom(15);
         }.bind(this));
-      }
-      else {
+      } else {
         console.error("BROWSER DOESN'T SUPPORT GEO LOCATION");
         this.map.setCenter(this.fallbackStartLatLng);
         this.map.setZoom(15);
       }
+
+      this.infoWindow = new InfoWindow(this.map);
 
     };
 
@@ -399,18 +399,29 @@ $(document).ready(function() {
         title: place.name
       }));
     };
-    
+
+    this.markerIsActive = function(place) {
+      console.log('checking if marker exists for ', place, this.activeMarkers);
+      for (var i = 0; i < this.activeMarkers.length; i++) {
+        if (this.activeMarkers[i].place_id === place.place_id) return true;
+      }
+      return false;
+    };
+
     this.placeMarker = function(place, map, setBy) {
-      console.log('PLACING MARKER')
+      if (this.markerIsActive(place)) return;
+      console.log('PLACING MARKER');
       var marker = this.generateMarker(place, map);
-          marker.setBy = setBy;
-      var infoPane = new infoWindow(this.map, place, marker);
+      marker.setBy = setBy;
+      marker.place_id = place.place_id;
+      // var infoPane = new infoWindow(this.map, place, marker);
       marker.addListener('click', function() {
-        infoPane.toggleOpen();
-      });
+        console.log('clicked marker ', marker, ' with place ', place);
+        this.infoWindow.openPane(place, marker);
+      }.bind(this));
       this.activeMarkers.push(marker);
-    }.bind(this);
-    
+    };
+
     this.setMapOnAll = function(map, filter) {
       filter = filter || function(item) {
         return true;
@@ -438,232 +449,171 @@ $(document).ready(function() {
       this.setMapOnAll(this.map, filter);
     };
 
-    this.plotPlaces = function(res, setBy) {
-      for (var i = 0; i < res.length; i++) {
-        this.placeMarker(res[i], this.map, setBy);
-      }
-      console.log(this.activeMarkers)
-    }.bind(this);
+    this.plotSearchPlaces = function(res) {
 
-//     this.execNearbySearch = function(searchTerm) {
-//       console.log("executing search");
-//       searchServices.nearbySearch(searchTerm, this.plotPlaces);
-//     };
+      if (Object.prototype.toString.call(res) === '[object Object]') return this.placeMarker(res, this.map, 'SEARCH_SVC');
 
-//     this.execSearchById = function(placeId) {
-//       searchServices.placeDetails(placeId, this.plotSearchRes);
-//     };
+      res.forEach(function(place) {
+        this.placeMarker(place, this.map, 'SEARCH_SVC');
+      }.bind(this));
 
 
-    // *************NEEDS ATTENTION***************
-    // - GENERATORS.
-    // - need to create some sort of internally managed array to keep track
-    //   of markers so they can be toggled.
-//     this.plotMyPlaces = function() {
-//       var myId = userInterface.getUserId();
-//       this.showMarkers(function(place) {
-//         return (place.placeOwner === myId) ? true : false;
-//       });
-//     };
+    };
 
-    // *************NEEDS ATTENTION***************
-    // - GENERATORS.
-//     this.plotFriendPlaces = function() {
-//       var myPlaces = userInterface.getFriendPlaces();
-
-//       for (var i = 0; i < Object.keys(myPlaces).length; i++) {
-//         this.placeMarker(myPlaces[i]);
-//       }
-//     };
+    this.clearSearchPlaces = function() {
+      console.log('clearing SEARCH_SVC places...');
+      this.clearMarkers(function(marker) {
+        return (marker.setBy === 'SEARCH_SVC') ? true : false;
+      });
+    };
 
     this.init();
 
   }
 
 
-  function TextBox(selector) {
-    this.textArea = $(selector);
-
-    this.getInput = () => {
-      return this.textArea.val();
-    };
-    this.isEmpty = () => {
-      return (this.textArea.val() === '');
-    };
-    this.length = () => {
-      return (this.textArea.val().length);
-    };
-  }
-
-
-
   function PrefetchResults(selector) {
     this.resultContainer = $(selector);
     this.loading = false;
 
-    this.createListItem = function(item) {
-      item = item || {
-        name: '',
-        place_id: ''
-      };
-      var toAdd = $("<li place_id='" + item.place_id + "'></li>");
-      toAdd.text(item.name);
-      $(toAdd).on('click', function() {
-        map.execSearchById(item.place_id);
-      });
-      return toAdd;
-    };
-
-    this.set = function(resultList) {
-      console.log("setting");
-
-      // %
-      if (resultList.length !== 0) {
-        resultList.forEach(function(item, index) {
-          console.log(item);
-          var toAdd = this.createListItem(item);
-          this.resultContainer.append(toAdd);
-        }.bind(this));
-      } else {
-        var toAdd = this.createListItem();
-        toAdd.text("No Results :/");
-        console.log("adding", toAdd);
-        this.resultContainer.append(toAdd);
-      }
-
-    };
-
-    this.clear = function() {
-      console.log("clearing");
-      this.resultContainer.children().not('li:first').remove();
+    this.templates = {
+      mainContainer: '<li place_id="{{PLACE_ID}}">{{PLACE_NAME}}</li>',
+      noResults: '<li>No Results :/</li>'
     };
 
     this.toggleLoading = function() {
-      console.log("toggling load");
       this.resultContainer.children('li:first').toggleClass('hide');
       this.loading = !this.loading;
     };
 
-    this.fetch = function(searchTerm) {
-      console.log("pulling");
-      this.toggleLoading();
-      searchServices.nearbySearch(searchTerm, function(data, status) {
-        console.log("recieved data", status);
-        this.clear();
-        this.toggleLoading();
-        if (status === google.maps.places.PlacesServiceStatus.OK) return this.set(data);
-        if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) return this.set([]);
+    this.clear = function() {
+      this.resultContainer.children().not('li:first').remove();
+    };
+
+    this.set = function(htmlToAdd) {
+      this.resultContainer.append(htmlToAdd);
+    };
+
+    this.buildItem = function(place) {
+      return (this.templates.mainContainer
+        .replace('{{PLACE_ID}}', place.place_id)
+        .replace('{{PLACE_NAME}}', place.name));
+    };
+
+    this.handleResultClick = function(evt, place) {
+      if ($(evt.target).attr('place_id')) map.plotSearchPlaces(place);
+    };
+
+    this.generateResultClickHandler = function(place) {
+      return (function(evt) {
+
+        this.handleResultClick(evt, place);
+
       }.bind(this));
     };
+
+    this.setResults = function(data) {
+      console.log('setting prefetch items... ', data);
+      if (data.length === 0) return this.set(this.templates.noResults);
+      data.forEach(function(place) {
+        var listItem = $(this.buildItem(place));
+        listItem.on('click', this.generateResultClickHandler(place));
+        this.set(listItem);
+      }.bind(this));
+
+    };
+
+
+    this.fetch = function(keyword) {
+      console.log('prefetching search results');
+      // if (this.loading) return console.log('prefetch is already in progress');
+      this.toggleLoading();
+      searchServices.nearbySearch(keyword).then(function(data, status) {
+
+        this.toggleLoading();
+        this.clear();
+        this.setResults(data);
+
+      }.bind(this), function(err) {
+        this.toggleLoading();
+        this.setResults([]);
+      }.bind(this));
+    };
+
   }
+
 
   function notificationController(node) {
 
-    this.container = $(node);
-    this.requestContainer = $('.mail--items');
+    this.requestContainer = $(node);
+    this.reqCount = this.requestContainer.children().length - 1;
 
-    this.decrement = function() {
-      var countContainer = this.container.children('.mail--txt');
-      var count = parseInt(countContainer.text(), 10);
-      count--;
-      countContainer.text(count);
-      if (count === 0) {
-        this.toggleRequestVisibilty();
-        this.toggleActive();
-        this.requestContainer.prepend('<li><span>No Requets : /</span></li>');
-      }
+    this.removeItem = function(requestId) {
+      var query = "li[request_id='{{REQ_ID}}']".replace('{{REQ_ID}}', requestId);
+      this.requestContainer.children(query)[0].remove();
+      this.reqCount--;
+
+      if (this.reqCount === 0) this.toggleRequestVisibilty();
     };
 
 
-    // *************NEEDS ATTENTION***************
-    // - should allow for less dupe code in accept/reject
-    this.respond = function(destination, data) {
+    this.accept = function(friendId) {
+      console.log('accepting ', friendId);
 
-      return (new Promise(function(res, rej) {
-        $.post(destination, data).success(function(msg) {
-          res(msg);
-        }).error(function(err) {
-          rej(err);
-        });
-      }));
+      userInterface.acceptRequest(friendId).then(function(msg) {
+
+        console.log('success! ', msg);
+        this.removeItem(friendId);
+
+      }.bind(this), setMessage.setConsole);
 
     };
 
-    this.getRequestId = function(evt) {
-      return $(evt.target).closest('li').attr('request-id');
-    };
 
-    this.removeRequestItem = function(evt) {
-      $(evt.target).closest('li').remove();
-    };
+    this.reject = function(friendId) {
+      console.log('rejecting ', friendId);
 
-    // *************NEEDS ATTENTION***************
-    this.accept = function(evt) {
-      var id = this.getRequestId(evt);
-      this.respond('/user/acceptRequest', {
-        friendId: id
-      }).then(function(msg) {
-        this.removeRequestItem(evt);
-        this.decrement();
-      }.bind(this), function(err) {
-        console.log(err);
-      });
-    };
+      userInterface.rejectRequest(friendId).then(function(msg) {
 
-    // *************NEEDS ATTENTION***************
-    this.reject = function(evt) {
-      var id = this.getRequestId(evt);
-      this.respond('/user/removeRequest', {
-        friendId: id
-      }).then(function(msg) {
-        this.removeRequestItem(evt);
-        this.decrement();
-      }.bind(this), function(err) {
-        console.log(err);
-      });
-    };
+        console.log('success! ', msg);
+        this.removeItem(friendId);
 
-    this.toggleActive = function() {
-      this.container.children().each(function(index, item) {
-        var node = $(item);
-        if (node.hasClass('active')) {
-          node.removeClass('active');
-          node.addClass('inactive');
-        } else {
-          node.removeClass('inactive');
-          node.addClass('active');
-        }
-      });
+      }.bind(this), setMessage.setConsole);
+
     };
 
     this.toggleRequestVisibilty = function() {
       this.requestContainer.toggleClass('hide');
     };
 
+
+
   }
 
 
   function handleSearchSubmit(evt) {
-    map.execNearbySearch(searchTextBox.getInput());
+
+    var searchTerm = searchTextBox.val();
+    console.log('starting nearby search...');
+    searchServices.nearbySearch(searchTerm).then(function(data) {
+      console.log('... OK starting map ops...');
+      map.clearSearchPlaces();
+      map.plotSearchPlaces(data);
+    }, setMessage.setConsole);
+
   }
 
   function handleSearchInput(evt) {
 
     if (evt.keyCode === 13) {
-      searchServices.nearbySearch(searchTextBox.getInput(), function(res, status) {
-        if (status == google.maps.places.PlacesServiceStatus.OK) {
-          
-          map.clearMarkers(function(marker) {return (marker.setBy === 'SEARCH_SVC') ? true : false})
-          map.plotPlaces(res, 'SEARCH_SVC');
-                    
-        }
-      })
-      return;
+      console.log('search input RETURN, passing to submit');
+      return handleSearchSubmit(evt);
     }
 
-    if (searchTextBox.length() === 0) return prefetchResults.clear();
-    if (searchTextBox.length() >= 4) return prefetchResults.fetch(searchTextBox.getInput());
+    var searchTerm = searchTextBox.val();
 
+    if (searchTerm.length === 0) return prefetchResults.clear();
+    if (searchTerm.length >= 4) return prefetchResults.fetch(searchTerm);
 
   }
 
@@ -676,8 +626,16 @@ $(document).ready(function() {
 
       if (!friendUsername) return setMessage.setGeneric('#requestStatus', 'No Friend username?');
 
-      userInterface.sendRequest(friendUsername);
+      var username = $('#username').text();
+
+      if (username === friendUsername) return setMessage.setGeneric('#requestStatus', "Can't add urself :/");
+
+      userInterface.sendRequest(friendUsername).then(function(msg) {
+        setMessage.setGeneric('#requestStatus', 'Request sent :D');
+      }, setMessage.setConsole);
+
     }
+
   }
 
 
@@ -690,25 +648,49 @@ $(document).ready(function() {
   }
 
   function handleOpenMail(evt) {
+
     notifications.toggleRequestVisibilty();
+
   }
 
 
 
   // *************NEEDS ATTENTION***************
   // - generator or use bubbling based on class
-  function handleReqAccept(evt) {
-    notifications.accept(evt);
-  }
+  // function handleReqAccept(evt) {
+  //   notifications.accept(evt);
+  // }
 
   // *************NEEDS ATTENTION***************
   // - generator or use bubbling based on class
-  function handleReqReject(evt) {
-    notifications.reject(evt);
+  // function handleReqReject(evt) {
+  //   notifications.reject(evt);
+  // }
+
+  function handleReqAction(evt) {
+
+    var target = $(evt.target);
+    console.log(target);
+
+    if (target.hasClass('mail--btn')) {
+      var friendId = $(target.parent()).attr('friend_id');
+      if (target.hasClass('accept')) return notifications.accept(friendId);
+      else return notifications.reject(friendId);
+
+    }
+
+
   }
 
   function handleRemoveFriend(evt) {
-    userInterface.removeFriend($(evt.target).attr('friend-id'));
+
+    var friendId = $(evt.target).attr('friend_id');
+
+    userInterface.removeFriend(friendId).then(function(msg) {
+      console.log(msg);
+    }, setMessage.setConsole);
+
+
   }
 
   // registers global event handlers
@@ -720,13 +702,16 @@ $(document).ready(function() {
     document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
     document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
     document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
+    
     document.getElementById('openMail').addEventListener('click', handleOpenMail);
     document.getElementById('closeMail').addEventListener('click', handleOpenMail);
+    document.getElementById('notifications').addEventListener('click', handleReqAction);
+
 
     // *************NEEDS ATTENTION***************
     $(".friend--remove--btn").click(handleRemoveFriend);
-    $(".mail--btn.accept").click(handleReqAccept);
-    $(".mail--btn.reject").click(handleReqReject);
+    // $(".mail--btn.accept").click(handleReqAccept);
+    // $(".mail--btn.reject").click(handleReqReject);
   }
 
   initialize();

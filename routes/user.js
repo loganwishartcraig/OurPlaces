@@ -13,7 +13,7 @@ router.get('/setCredentials', verifyAuth, function(req, res) {
 router.post('/setCredentials', verifyAuth, function(req, res, next) {
 
   if (req.body.username === 'SEARCH_SVC') {
-    res.status(400).json({message: "Ur trying to use a reserved username :s"})
+    res.status(400).json({message: "Ur trying to use a reserved username :s"});
     return next();
   }
   
@@ -37,7 +37,6 @@ router.get('/getUser', verifyAuth, function(req, res) {
 router.post('/addRequest', verifyAuth, function(req, res) {
   console.log("\tADD REQUEST TO: ", req.body.friendUsername);
   console.log("\tFROM USER: ", req.user.id);
-  console.log("\tWHO SAYS HE'S USER:", req.body.username)
   console.log("\t");
 
   userService.addRequest(req.body.friendUsername, req.user).then(function(msg) {
@@ -100,9 +99,9 @@ function verifyAuth(req, res, next) {
 
 
 router.post('/addPlace', verifyAuth, function(req, res) {
-  userService.addPlace(req.user.id, JSON.parse(req.body.place)).then(function(msg) {
+  userService.addPlace(req.user.id, JSON.parse(req.body.place)).then(function(newOwnedPlaces) {
     console.log('\tplace SAVED!');
-    res.sendStatus(200);
+    res.json({message: 'Savvveeed place.', ownedPlaces: newOwnedPlaces});
   }, function(err) {
     console.log('\tplace FAILED!');
     res.status(501).json(err);
@@ -112,9 +111,9 @@ router.post('/addPlace', verifyAuth, function(req, res) {
 
 
 router.post('/removePlace', verifyAuth, function(req, res) {
-  userService.removePlace(req.user.id, JSON.parse(req.body.place)).then(function(msg) {
+  userService.removePlace(req.user.id, JSON.parse(req.body.place)).then(function(newOwnedPlaces) {
     console.log('\tplace REMOVED!');
-    res.sendStatus(200);
+    res.json({message: 'removed place.', ownedPlaces: newOwnedPlaces});
   }, function(err) {
     console.log('\tplace FAILED!');
     res.status(501).json(err);
