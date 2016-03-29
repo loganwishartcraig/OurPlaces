@@ -1,3 +1,4 @@
+
 var mongoose = require('mongoose');
 var User = require('../models/userModel');
 
@@ -99,25 +100,28 @@ function buildFriendPlaceList(friendList) {
     console.log('going through ', friend.username, ' places');
     
     friend.ownedPlaces.forEach(function(place) {
+
+      var placeIndex = binary.indexOf(placeList, {place_id: place.place_id}, placeCompare);
      
-      var placeIndex = binary.indexOf(placeList, {placeId: place.placeId}, placeCompare);
-     
-      console.log('place ', placeId, ' has index ', placeIndex, 'in placeList ', placeList);
+      console.log('place ', place.place_id, ' has index ', placeIndex, 'in placeList ', placeList);
 
       
       if (placeIndex >= 0) {
         
-        placeList[placeIndex].owners.push(friend.username);
+        placeList[placeIndex].savedBy.push(friend.username);
+        console.log(placeList);
         
       } else {
         
-        place.owners = [friend.username];
-        binary.insert(placeList, place, placeCompare);
-        
+        place.savedBy = [friend.username];
+        placeList = binary.insert(placeList, place, placeCompare);
+        console.log(placeList);
       }
       
     });
+  
   });
+    return placeList;
   
   
 }
@@ -138,7 +142,8 @@ exports.getInfo = function(userId, next) {
     });
 
     var friendPlaceList = buildFriendPlaceList(user.friends);
-    user.friendPlaces = friendPlaceList;
+    console.log(friendPlaceList);
+    user.friendsPlaces = friendPlaceList;
     
     return next(null, serealizeUserResult(user));
   });

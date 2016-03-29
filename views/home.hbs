@@ -22,10 +22,10 @@
           <span class="control--header">OurPlaces</span>
           <ul id="filterContainer" class="filter--ctrls">
             <li class="filter--ctrl">
-              <button id="filterMyPlaces" class="filter--btn active">My Places</button>
+              <button id="filterMyPlaces" class="filter--btn">My Places</button>
             </li>
             <li>
-              <button id="filterFriendPlaces" class="filter--btn inactive">Everyones Places</button>
+              <button id="filterFriendPlaces" class="filter--btn">Everyones Places</button>
             </li>
           </ul>
         </div>
@@ -35,7 +35,7 @@
               {{#if user.friendCount}}
               {{#each user.friends}}
               <li class="friend--item">
-                <span class="friend--name">{{this.username}} | {{this.firstName}}</span><button class="friend--remove--btn" friend_id="{{this.userId}}">Delete</button>
+                <span class="friend--name">{{this.username}} | {{this.firstName}} <button class="friend--remove--btn" friend_id="{{this.userId}}">X</button></span>
               </li>
               {{/each}} {{else}}
                 <li class="friend--item">

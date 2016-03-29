@@ -80,6 +80,7 @@ button {
 
 .friend--name {
   display: block;
+  position: relative;
   font-size: .85rem;
   padding: .2rem 0;
   padding-left: .5rem;
@@ -91,6 +92,17 @@ button {
   text-align: center;
   padding: 0;
 }
+
+.friend--remove--btn {
+  display: inline-block;
+  position: absolute;
+  top: 2px;
+  right: 15px;
+  border: 1px solid gainsboro;
+  padding: 0 5px;
+  font-size: .85rem;
+}
+
 
 
 /* request container */
@@ -148,15 +160,17 @@ button {
   padding-right: .35rem;
   width: 100%;
   text-align: right;
+  border-right: 8px solid #cecdcd;
+}
+
+.filter--btn:hover {
+  border-right-color: #E1C6F1;
 }
 
 .filter--btn.active {
   border-right: 8px solid #d998fe;
 }
 
-.filter--btn.inactive {
-  border-right: 8px solid #cecdcd;
-}
 /* map container */
 
 .map--area {

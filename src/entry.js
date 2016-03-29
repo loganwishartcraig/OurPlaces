@@ -180,6 +180,14 @@ $(document).ready(function() {
       }));
     };
 
+    this.getOwnedPlaces = function() {
+      return this.user.ownedPlaces;
+    };
+
+    this.getFriendPlaces = function() {
+      return this.user.friendsPlaces;
+    };
+
     this.init();
 
   }
@@ -412,9 +420,13 @@ $(document).ready(function() {
       if (this.markerIsActive(place)) return;
       console.log('PLACING MARKER');
       var marker = this.generateMarker(place, map);
+
+      // should this be here?
       marker.setBy = setBy;
       marker.place_id = place.place_id;
-      // var infoPane = new infoWindow(this.map, place, marker);
+      marker.savedBy = place.savedBy;
+
+
       marker.addListener('click', function() {
         console.log('clicked marker ', marker, ' with place ', place);
         this.infoWindow.openPane(place, marker);
@@ -451,12 +463,17 @@ $(document).ready(function() {
 
     this.plotSearchPlaces = function(res) {
 
-      if (Object.prototype.toString.call(res) === '[object Object]') return this.placeMarker(res, this.map, 'SEARCH_SVC');
+      this.plotPlaces(res, 'SEARCH_SVC');
 
-      res.forEach(function(place) {
-        this.placeMarker(place, this.map, 'SEARCH_SVC');
+    };
+
+    this.plotPlaces = function(places, setBy) {
+
+      if (Object.prototype.toString.call(places) === '[object Object]') return this.placeMarker(places, this.map, setBy);
+
+      places.forEach(function(place) {
+        this.placeMarker(place, this.map, setBy);
       }.bind(this));
-
 
     };
 
@@ -598,7 +615,7 @@ $(document).ready(function() {
     searchServices.nearbySearch(searchTerm).then(function(data) {
       console.log('... OK starting map ops...');
       map.clearSearchPlaces();
-      map.plotSearchPlaces(data);
+      map.plotPlaces(data, 'SEARCH_SVC');
     }, setMessage.setConsole);
 
   }
@@ -643,12 +660,36 @@ $(document).ready(function() {
 
 
   function handleMyPlaceFilter(evt) {
-    map.plotMyPlaces();
+
+    var filterBtn = $(evt.target);
+    if (filterBtn.hasClass('active')) {
+      map.clearMarkers(function(marker) {
+        return (marker.setBy === 'USER_FLTR') ? true : false;
+      });
+    } else {
+      map.plotPlaces(userInterface.getOwnedPlaces(), 'USER_FLTR');
+    }
+
+    filterBtn.toggleClass('active');
+
   }
 
   function handleFriendPlaceFilter(evt) {
-    map.plotFriendPlaces();
+
+    var filterBtn = $(evt.target);
+    if (filterBtn.hasClass('active')) {
+      map.clearMarkers(function(marker) {
+        return (marker.setBy === 'FRIEND_FLTR') ? true : false;
+      });
+    } else {
+      map.plotPlaces(userInterface.getFriendPlaces(), 'FRIEND_FLTR');
+    }
+
+    filterBtn.toggleClass('active');
   }
+
+
+
 
   function handleOpenMail(evt) {
 
@@ -657,18 +698,6 @@ $(document).ready(function() {
   }
 
 
-
-  // *************NEEDS ATTENTION***************
-  // - generator or use bubbling based on class
-  // function handleReqAccept(evt) {
-  //   notifications.accept(evt);
-  // }
-
-  // *************NEEDS ATTENTION***************
-  // - generator or use bubbling based on class
-  // function handleReqReject(evt) {
-  //   notifications.reject(evt);
-  // }
 
   function handleReqAction(evt) {
 
@@ -687,25 +716,32 @@ $(document).ready(function() {
 
   function handleRemoveFriend(evt) {
 
-    var friendId = $(evt.target).attr('friend_id');
+    var target = $(evt.target)
+    var friendId = target.attr('friend_id');
 
     userInterface.removeFriend(friendId).then(function(msg) {
+
+      target.parent('');
       console.log(msg);
     }, setMessage.setConsole);
 
 
   }
 
+
+
   // registers global event handlers
   function registerHandlers() {
     // search submit button => excecute search
     document.getElementById('placesSearchSubmit').addEventListener('click', handleSearchSubmit);
     document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
+
     document.getElementById('addFriendInput').addEventListener('keyup', handleRequestSubmit);
     document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
+
     document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
     document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
-    
+
     document.getElementById('openMail').addEventListener('click', handleOpenMail);
     document.getElementById('closeMail').addEventListener('click', handleOpenMail);
     document.getElementById('notifications').addEventListener('click', handleReqAction);
