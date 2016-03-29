@@ -50,7 +50,7 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GoogleStrategy({
   clientID: '919257842102-bpf16gm6ga69os8vl809l82biiqc5j40.apps.googleusercontent.com',
   clientSecret: 'JYOtDKIMTt9ebWAYowix-NlM',
-  callbackURL: 'http://localhost:3000/auth/google/cb'
+  callbackURL: 'http://port-3000.4rls2jox4ncxflxrqya0jtt3w6xq1tt9oi7df5t7870c0udi.box.codeanywhere.com/auth/google/cb'
 }, function(accessToken, refreshToken, profile, done) {
   return done(null, profile);
 }));

@@ -10,7 +10,7 @@ module.exports = function() {
 
     while (lo <= hi) {
       var compareResult = compare(arr[mid], toInsert);
-      console.log('\t\tComparing ' + [lo, hi, mid, compareResult].join(' '));
+//       console.log('\t\tComparing ' + [lo, hi, mid, compareResult].join(' '));
       if (compareResult === 0) break;
       if (compareResult === -1) {
         lo = mid + 1;
@@ -46,7 +46,7 @@ module.exports = function() {
 
   this.finalCompare = function(arr, index, toCompare, compare) {
     
-    console.log('final comparing ', arr, index, toCompare)
+//     console.log('final comparing ', arr, index, toCompare)
     if (index < 0) {
       return compare(arr[0], toCompare);
     } else if (index > arr.length - 1) {
@@ -57,9 +57,9 @@ module.exports = function() {
   };
 
   this.indexOf = function(arr, searchFor, compare) {
-    if (arr.length === 0) return undefined;
+    if (arr.length === 0) return -1;
     var index = this.getClosestIndex(arr, searchFor, compare);
-    if (this.finalCompare(arr, index, searchFor, compare) !== 0) return undefined;
+    if (this.finalCompare(arr, index, searchFor, compare) !== 0) return -1;
     return index;
   };
 

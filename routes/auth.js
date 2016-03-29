@@ -3,11 +3,6 @@ var router = express.Router();
 var passport = require('passport');
 var userService = require('../services/userService');
 
-/* GET home page. */
-// router.post('/login', function(req, res) {
-//   res.redirect('/auth/google');
-// });
-
 router.get('/google', passport.authenticate('google', {
   scope: 'https://www.googleapis.com/auth/plus.login'
 }));
@@ -19,6 +14,9 @@ router.get('/google/cb',
   }),
   function(req, res) {
 
+   // should replace the 'user' object in the 'req' propery w/ the user
+   // returned from this function
+  
     userService.findOrCreate(req.user, function(err, user) {
       if(err) res.redirect('/err');
       if (!user.username) {

@@ -632,7 +632,10 @@ $(document).ready(function() {
 
       userInterface.sendRequest(friendUsername).then(function(msg) {
         setMessage.setGeneric('#requestStatus', 'Request sent :D');
-      }, setMessage.setConsole);
+      }, function(err) {
+        console.log(err);
+        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
+      });
 
     }
 

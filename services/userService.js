@@ -89,8 +89,44 @@ exports.findOrCreate = function(userToAdd, next) {
   });
 };
 
+
+function buildFriendPlaceList(friendList) {
+  
+  console.log('buidling friend place list');
+  var placeList = [];
+  friendList.forEach(function(friend) {
+    
+    console.log('going through ', friend.username, ' places');
+    
+    friend.ownedPlaces.forEach(function(place) {
+     
+      var placeIndex = binary.indexOf(placeList, {placeId: place.placeId}, placeCompare);
+     
+      console.log('place ', placeId, ' has index ', placeIndex, 'in placeList ', placeList);
+
+      
+      if (placeIndex >= 0) {
+        
+        placeList[placeIndex].owners.push(friend.username);
+        
+      } else {
+        
+        place.owners = [friend.username];
+        binary.insert(placeList, place, placeCompare);
+        
+      }
+      
+    });
+  });
+  
+  
+}
+
 exports.getInfo = function(userId, next) {
 
+  // custom friend field population so can't use 'lookupUser'  
+  // could still use promises though
+  
   User.findOne({
     userId: userId
   }).populate('friends', 'firstName lastName userId ownedPlaces username').exec(function(err, user) {
@@ -101,6 +137,9 @@ exports.getInfo = function(userId, next) {
       message: "User not found"
     });
 
+    var friendPlaceList = buildFriendPlaceList(user.friends);
+    user.friendPlaces = friendPlaceList;
+    
     return next(null, serealizeUserResult(user));
   });
 
@@ -177,12 +216,15 @@ exports.addRequest = function(friendUsername, userAdding) {
 
   return (
     new Promise(function(res, rej) {
-
+            
       console.log('looking up ', friendUsername);
 
       var userAddingId = userAdding.id;
 
       lookupUser({ username: friendUsername }).then(function(user) {
+
+        // need to ensure you can't add a request to someone whom you have an active request from.
+        
         console.log("\t\tChecking existing requests/firends");
         if (user.userId === userAddingId) return rej({ message: "u can't add urself :/" });
         if (binary.exists(user.friendRequests, {userId: userAddingId}, userIdCompare)) return rej({
