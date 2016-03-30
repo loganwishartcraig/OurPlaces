@@ -29,9 +29,10 @@
             </li>
           </ul>
         </div>
-        <div class="friend--container">
-            <span class="friend--header">My Friends</span>
-            <ul class="friend--list">
+        <button class="friend--show--btn">
+        My Friends
+            <!-- <span class="friend--header">My Friends</span> -->
+            <!-- <ul class="friend--list">
               {{#if user.friendCount}}
               {{#each user.friends}}
               <li class="friend--item">
@@ -42,8 +43,8 @@
  <span class="friend--name empty">no friends yet :(</span>
               </li>
               {{/if}}
-            </ul>
-        </div>
+            </ul> -->
+        </button>
         <div class="request--contianer">
           <div class="request--input--container">
             <input id="addFriendInput" class="request--input" type="text" name="friendUsername" placeholder="Buddy Username">
@@ -67,7 +68,40 @@
         </div>
       </div>
       <div class="map--area">
-        <div class="controls--container">
+      
+        <div class="friend--overlay">
+          
+
+
+          <div class="dim-bg full--height"></div>
+          <h3 class="friend--filter--header">Find Someone</h3>
+          <input class="friend--filter" type="text" placeholder="Search For Ur m8s" selected>
+
+            <ul class="friend--container">
+              <li class="friend--item">Friend
+              </li>
+
+
+{{#if user.friendCount}}
+              {{#each user.friends}}
+              <li class="friend--item">
+                <span class="friend--name">{{this.username}} | {{this.firstName}} <button class="friend--remove--btn" friend_id="{{this.userId}}">X</button></span>
+              </li>
+              {{/each}} {{else}}
+                <li class="friend--item">
+ <span class="friend--name empty">no friends yet :(</span>
+              </li>
+              {{/if}}
+
+
+            </ul>
+
+          </div>
+
+
+
+
+        <div class="controls--container blur">
           <div class="search--container">
             <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
             <ul id="predictiveContainer" class="predictive--results">
@@ -90,7 +124,7 @@
         {{/if}}
             <li id="closeMail"><button>Close</button></li>
             </ul>
-        <div id="map" class="map">
+        <div id="map" class="map blur">
         </div>
       </div>
     </div>

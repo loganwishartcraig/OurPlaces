@@ -14,7 +14,8 @@ a,
 p,
 span,
 button,
-input {
+input,
+li {
   font-family: 'PT Sans Narrow', sans-serif;
   color: #333;
 }
@@ -65,18 +66,13 @@ button {
   z-index: 5;
 }
 /* nav components */
-
 /* friend container */
-.friend--container {
-  margin: 1rem 0;
-  overflow: hidden;
-}
 
-.friend--header {
+/*.friend--header {
   display: inline-block;
   border-bottom: 1px solid #f0ddfb;
   margin-bottom: .5rem;
-}
+}*/
 
 .friend--name {
   display: block;
@@ -93,6 +89,14 @@ button {
   padding: 0;
 }
 
+.friend--show--btn {
+   display: inline-block;
+  border-bottom: 1px solid #f0ddfb;
+  border-top: 1px solid #f0ddfb;
+  margin: .5rem 0;
+  padding: 1rem;
+}
+
 .friend--remove--btn {
   display: inline-block;
   position: absolute;
@@ -103,7 +107,68 @@ button {
   font-size: .85rem;
 }
 
+.friend--overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 10;
+  padding: 1rem 3rem;
+  box-sizing: border-box;
+}
 
+.friend--container {
+  position: relative;
+  z-index: 15;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.friend--container > li {
+  width: 18%;
+  margin: .5rem 1%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: white;
+  border: 1px solid black;
+}
+
+.friend--filter {
+  display: block;
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  margin-bottom: 1rem;
+  padding: .5rem;
+  box-sizing: border-box;
+  z-index: 15;
+}
+
+.friend--filter--header {
+  position: relative;
+  z-index: 10;
+  color: white;
+  font-size: 1.5rem;
+  margin-bottom: .5rem;
+  width: 100%;
+}
+
+/* move me */
+
+.dim-bg {
+  background: rgba(0, 0, 0, .85);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.blur {
+  -webkit-filter: blur(5px);
+  filter: blur(5px);
+}
 
 /* request container */
 
@@ -125,7 +190,7 @@ button {
   background: #f0ddfb;
   font-weight: 700;
   font-size: .75rem;
-  padding: .15rem 1.25rem;  
+  padding: .15rem 1.25rem;
   border: 1px solid #8A7B92;
 }
 /* control panel */
@@ -170,7 +235,6 @@ button {
 .filter--btn.active {
   border-right: 8px solid #d998fe;
 }
-
 /* map container */
 
 .map--area {
