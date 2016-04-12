@@ -65,6 +65,7 @@
 	  var userInterface;
 	  var prefetchResults;
 	  var notifications;
+	  var friendController;
 	  var setMessage;
 
 	  function initialize() {
@@ -89,6 +90,9 @@
 
 	    // binds controller to update notifications
 	    notifications = new notificationController("#notifications");
+
+	    // binds conroller to update friends
+	    friendController = new FriendController("#friendList");
 
 	    // register global event handlers
 	    registerHandlers();
@@ -203,6 +207,7 @@
 	        $.post('/user/acceptRequest', {
 	          friendId: friendId
 	        }).success(function (msg) {
+	          console.log('accepted!', msg);
 	          res(msg);
 	        }).error(function (err) {
 	          rej(err);
@@ -231,6 +236,17 @@
 	      return this.user.friendsPlaces;
 	    };
 
+	    this.logout = function () {
+
+	      return new _promise2.default(function (res, rej) {
+
+	        $.post('/user/logout').success(function (msg) {
+	          res(msg);
+	        }).error(function (err) {
+	          rej(err);
+	        });
+	      });
+	    };
 	    this.init();
 	  }
 
@@ -282,7 +298,7 @@
 
 	    this.classes = {
 	      actionBtn: {
-	        main: 'save--place--btn',
+	        main: 'place--save--btn',
 	        save: 'save',
 	        remove: 'remove'
 	      }
@@ -290,26 +306,34 @@
 
 	    this.templates = {
 	      actionBtn: {
-	        save: '<button class="{{BTN_CLASS_MAIN}} {{BTN_CLASS_ACTION}}" place_id="{{PLACE_ID}}">Save</button>',
-	        remove: '<button class="{{BTN_CLASS_MAIN}} {{BTN_CLASS_ACTION}}" place_id="{{PLACE_ID}}">Remove</button>'
+	        save: '<button class="place--save--btn %%BTN_CLASS_ACTION%%" place_id="%%PLACE_ID%%">Save</button>',
+	        remove: '<button class="place--save--btn %%BTN_CLASS_ACTION%%" place_id="%%PLACE_ID%%">Remove</button>'
 	      },
-	      mainContainer: '<div>{{ACTION_BTN}}<span>{{PLACE_NAME}}</span></div>'
+	      savedBy: '<span class="place--marker--saved">Saved By: %%SAVE_LIST%%</span>',
+	      mainContainer: '<div><span class="place--marker--title">%%PLACE_NAME%%</span><hr/>%%SAVED_BY%%<hr/>%%ACTION_BTN%%</div>',
+	      btnDOMQuery: '.%%BTN_CLASS%%[place_id="%%PLACE_ID%%"]'
 	    };
 
 	    this.buildActionButton = function (place) {
 	      // WHERE SHOULD THIS CHECK BE? Should a 'savedPlace' flag be set on 'place'? Should 'marker' be passed with a flag?
 	      if (userInterface.hasPlace(place.place_id)) {
-	        return this.templates.actionBtn.remove.replace('{{BTN_CLASS_MAIN}}', this.classes.actionBtn.main).replace('{{BTN_CLASS_ACTION}}', this.classes.actionBtn.remove);
+	        return this.templates.actionBtn.remove.replace('%%BTN_CLASS_ACTION%%', this.classes.actionBtn.remove);
 	      } else {
-	        return this.templates.actionBtn.save.replace('{{BTN_CLASS_MAIN}}', this.classes.actionBtn.main).replace('{{BTN_CLASS_ACTION}}', this.classes.actionBtn.save);
+	        return this.templates.actionBtn.save.replace('%%BTN_CLASS_ACTION%%', this.classes.actionBtn.save);
 	      }
+	    };
+
+	    this.buildSavedBy = function (place) {
+
+	      return place.savedBy ? this.templates.savedBy.replace('%%SAVE_LIST%%', place.savedBy.join(', ')) : '';
 	    };
 
 	    this.buildInfoWindow = function (place) {
 
 	      var button = this.buildActionButton(place);
+	      var savedBy = this.buildSavedBy(place);
 
-	      var contentString = this.templates.mainContainer.replace("{{ACTION_BTN}}", button).replace("{{PLACE_NAME}}", place.name).replace("{{PLACE_ID}}", place.place_id);
+	      var contentString = this.templates.mainContainer.replace("%%ACTION_BTN%%", button).replace('%%SAVED_BY%%', savedBy).replace("%%PLACE_NAME%%", place.name).replace("%%PLACE_ID%%", place.place_id);
 
 	      return contentString;
 	    };
@@ -355,7 +379,8 @@
 	      console.log('configuring click handler...');
 
 	      return function () {
-	        var query = '.' + this.classes.actionBtn.main + "[place_id='" + place.place_id + "']";
+	        var query = this.templates.btnDOMQuery.replace('%%BTN_CLASS%%', this.classes.actionBtn.main).replace('%%PLACE_ID%%', place.place_id);
+
 	        var node = $(query);
 	        $(node).on('click', this.generateActionClickHandler(place));
 	      }.bind(this);
@@ -514,7 +539,7 @@
 	    this.loading = false;
 
 	    this.templates = {
-	      mainContainer: '<li place_id="{{PLACE_ID}}">{{PLACE_NAME}}</li>',
+	      mainContainer: '<li place_id="%%PLACE_ID%%">%%PLACE_NAME%%</li>',
 	      noResults: '<li>No Results :/</li>'
 	    };
 
@@ -532,7 +557,7 @@
 	    };
 
 	    this.buildItem = function (place) {
-	      return this.templates.mainContainer.replace('{{PLACE_ID}}', place.place_id).replace('{{PLACE_NAME}}', place.name);
+	      return this.templates.mainContainer.replace('%%PLACE_ID%%', place.place_id).replace('%%PLACE_NAME%%', place.name);
 	    };
 
 	    this.handleResultClick = function (evt, place) {
@@ -572,41 +597,104 @@
 	    };
 	  }
 
+	  function FriendController(node) {
+
+	    this.friendContainer = $(node);
+	    this.itemTemplate = $("#friendTemplate").html();
+
+	    this.addItem = function (friend) {
+
+	      var rawHTML = this.itemTemplate.replace("%%USERNAME%%", friend.username).replace("%%FNAME%%", friend.firstName).replace("%%LNAME%%", friend.lastName).replace("%%PLACE_COUNT%%", friend.placeCount).replace("%%FRIEND_ID%%", friend.userId);
+
+	      var toAdd = $(rawHTML);
+
+	      toAdd.children('button.friend--remove[friend_id="' + friend.userId + '"]').click(handleRemoveFriend);
+
+	      if (this.friendContainer.children().length === 1) {
+	        this.friendContainer.children().last().addClass('hide');
+	      }
+
+	      this.friendContainer.prepend(toAdd);
+
+	      // if (userInterface.hasFriends()) {
+	      //   this.friendContainer.last().addClass('hide');
+	      // }
+	    };
+
+	    this.removeItem = function (friendId) {
+
+	      var btn = $('.friend--remove[friend_id="' + friendId + '"]');
+	      btn.parentsUntil('ul')[0].remove();
+
+	      if (this.friendContainer.children().length === 1) {
+	        this.friendContainer.children().last().removeClass('hide');
+	      }
+	    };
+	  }
+
 	  function notificationController(node) {
 
 	    this.requestContainer = $(node);
-	    this.reqCount = this.requestContainer.children().length - 1;
+
+	    this.noRequests = $('.friend--request.empty');
+	    this.iconContainer = $('.mail--img');
+
+	    this.reqCount = this.requestContainer.children().length - 2;
 
 	    this.removeItem = function (requestId) {
-	      var query = "li[request_id='{{REQ_ID}}']".replace('{{REQ_ID}}', requestId);
+	      console.log(requestId);
+	      var query = "li[request_id='%%REQ_ID%%']".replace('%%REQ_ID%%', requestId);
+	      console.log(query);
+
 	      this.requestContainer.children(query)[0].remove();
 	      this.reqCount--;
-
-	      if (this.reqCount === 0) this.toggleRequestVisibilty();
+	      if (this.reqCount === 0) this.toggleRequestActive();
 	    };
 
-	    this.accept = function (friendId) {
-	      console.log('accepting ', friendId);
+	    // this.accept = function(friendId) {
+	    //   console.log('accepting ', friendId);
 
-	      userInterface.acceptRequest(friendId).then(function (msg) {
+	    //   // userInterface.acceptRequest(friendId).then(function(msg) {
 
-	        console.log('success! ', msg);
-	        this.removeItem(friendId);
-	      }.bind(this), setMessage.setConsole);
-	    };
+	    //   //   console.log('success! ', msg);
+	    //   //   this.removeItem(friendId);
 
-	    this.reject = function (friendId) {
-	      console.log('rejecting ', friendId);
+	    //   // }.bind(this), setMessage.setConsole);
 
-	      userInterface.rejectRequest(friendId).then(function (msg) {
+	    // };
 
-	        console.log('success! ', msg);
-	        this.removeItem(friendId);
-	      }.bind(this), setMessage.setConsole);
+	    // this.reject = function(friendId) {
+	    //   // console.log('rejecting ', friendId);
+
+	    //   // userInterface.rejectRequest(friendId).then(function(msg) {
+
+	    //   //   console.log('success! ', msg);
+	    //   //   this.removeItem(friendId);
+
+	    //   // }.bind(this), setMessage.setConsole);
+
+	    // };
+
+	    this.toggleRequestActive = function () {
+
+	      this.iconContainer.removeClass('active');
+	      this.iconContainer.addClass('inactive');
+
+	      this.noRequests.removeClass('hide');
+
+	      this.toggleRequestVisibilty();
 	    };
 
 	    this.toggleRequestVisibilty = function () {
+	      // blur effect / class toggle is very similar to friends bttn
 	      this.requestContainer.toggleClass('hide');
+
+	      // blur bg effect?
+	      // this.requestContainer.siblings().each(
+	      // function(i, node) {
+	      //   $(node).toggleClass('blur');
+	      // }
+	      // );
 	    };
 	  }
 
@@ -630,29 +718,11 @@
 
 	    var searchTerm = searchTextBox.val();
 
-	    if (searchTerm.length === 0) return prefetchResults.clear();
-	    if (searchTerm.length >= 4) return prefetchResults.fetch(searchTerm);
-	  }
-
-	  function handleRequestSubmit(evt) {
-
-	    if (!evt.keyCode || evt.keyCode === 13) {
-
-	      var friendUsername = $('.request--input').val();
-
-	      if (!friendUsername) return setMessage.setGeneric('#requestStatus', 'No Friend username?');
-
-	      var username = $('#username').text();
-
-	      if (username === friendUsername) return setMessage.setGeneric('#requestStatus', "Can't add urself :/");
-
-	      userInterface.sendRequest(friendUsername).then(function (msg) {
-	        setMessage.setGeneric('#requestStatus', 'Request sent :D');
-	      }, function (err) {
-	        console.log(err);
-	        setMessage.setGeneric('#requestStatus', err.responseJSON.message);
-	      });
-	    }
+	    if (searchTerm.length === 0) {
+	      prefetchResults.clear();
+	      map.clearSearchPlaces();
+	    };
+	    if (searchTerm.length >= 2) return prefetchResults.fetch(searchTerm);
 	  }
 
 	  function handleMyPlaceFilter(evt) {
@@ -695,7 +765,20 @@
 
 	    if (target.hasClass('mail--btn')) {
 	      var friendId = $(target.parent()).attr('friend_id');
-	      if (target.hasClass('accept')) return notifications.accept(friendId);else return notifications.reject(friendId);
+	      if (target.hasClass('accept')) {
+	        userInterface.acceptRequest(friendId).then(function (friend) {
+	          console.log('accepted!');
+	          notifications.removeItem(friendId);
+	          friendController.addItem(friend);
+	        }, setMessage.setConsole);
+	      } else {
+
+	        userInterface.rejectRequest(friendId).then(function (friend) {
+	          console.log('rejected!');
+
+	          notifications.removeItem(friendId);
+	        }, setMessage.setConsole);
+	      }
 	    }
 	  }
 
@@ -706,9 +789,50 @@
 
 	    userInterface.removeFriend(friendId).then(function (msg) {
 
-	      target.parent('');
-	      console.log(msg);
+	      friendController.removeItem(friendId);
 	    }, setMessage.setConsole);
+	  }
+
+	  function handleShowFriends(evt) {
+
+	    $(".friend--overlay").toggleClass('hide');
+	    // $('.friend--overlay').siblings().each(
+	    //   function(i, node) {
+	    //     $(node).toggleClass('blur');
+	    //   }
+	    // );
+	  }
+
+	  function handleFriendFilterInput(evt) {
+
+	    if (evt.keyCode === 13) return handleFriendAdd(evt);
+	  }
+
+	  function handleFriendAdd(evt) {
+
+	    var friendUsername = $('.friend--filter').val();
+
+	    if (!friendUsername) return setMessage.setGeneric('#requestStatus', 'No Friend username?');
+
+	    var username = $('#username').text();
+
+	    if (username === friendUsername) return setMessage.setGeneric('#requestStatus', "Can't add urself :/");
+
+	    userInterface.sendRequest(friendUsername).then(function (msg) {
+	      setMessage.setGeneric('#requestStatus', 'Request sent :D');
+	    }, function (err) {
+	      console.log(err);
+	      setMessage.setGeneric('#requestStatus', err.responseJSON.message);
+	    });
+	  }
+
+	  function handleLogout(evt) {
+
+	    userInterface.logout().then(function (msg) {
+	      window.location = 'http://localhost:3000/';
+	    }, function (err) {
+	      console.log(err);
+	    });
 	  }
 
 	  // registers global event handlers
@@ -717,8 +841,13 @@
 	    document.getElementById('placesSearchSubmit').addEventListener('click', handleSearchSubmit);
 	    document.getElementById('placeSearchInput').addEventListener('keyup', handleSearchInput);
 
-	    document.getElementById('addFriendInput').addEventListener('keyup', handleRequestSubmit);
-	    document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
+	    // NEW
+	    document.getElementById('showFriends').addEventListener('click', handleShowFriends);
+	    document.getElementById('friendFilterInput').addEventListener('keyup', handleFriendFilterInput);
+	    document.getElementById('addFriendSubmit').addEventListener('click', handleFriendAdd);
+	    ///////
+
+	    // document.getElementById('addFriendSubmit').addEventListener('click', handleRequestSubmit);
 
 	    document.getElementById('filterMyPlaces').addEventListener('click', handleMyPlaceFilter);
 	    document.getElementById('filterFriendPlaces').addEventListener('click', handleFriendPlaceFilter);
@@ -728,9 +857,8 @@
 	    document.getElementById('notifications').addEventListener('click', handleReqAction);
 
 	    // *************NEEDS ATTENTION***************
-	    $(".friend--remove--btn").click(handleRemoveFriend);
-	    // $(".mail--btn.accept").click(handleReqAccept);
-	    // $(".mail--btn.reject").click(handleReqReject);
+	    $(".friend--remove").click(handleRemoveFriend);
+	    $('.logout--btn').click(handleLogout);
 	  }
 
 	  initialize();

@@ -36,24 +36,8 @@ function placeCompare(data, term) {
 /*******/
 
 
-function serealizeUserResult(userRecord) {
 
-  var toReturn = {};
-  toReturn.id = userRecord.userId;
-  toReturn.firstName = userRecord.firstName;
-  toReturn.username = userRecord.username;
-  toReturn.lastName = userRecord.lastName;
-  toReturn.friends = userRecord.friends;
-  toReturn.ownedPlaces = userRecord.ownedPlaces;
-  toReturn.friendsPlaces = userRecord.friendsPlaces;
-  toReturn.friendCount = userRecord.friendCount;
-  toReturn.friendRequests = userRecord.friendRequests;
-  toReturn.requestCount = userRecord.requestCount;
-  return toReturn;
-
-}
-
-//REFACTOR W/ GETUSER
+// returns user if user found so can't use lookupuser
 exports.findOrCreate = function(userToAdd, next) {
 
   console.log("finding user");
@@ -70,7 +54,7 @@ exports.findOrCreate = function(userToAdd, next) {
     console.log("making user");
 
     // relies on the layout of the google oAuth syntax
-    // should abstract out
+    // should abstract out?
     var newUser = new User({
       userId: userToAdd.id,
       firstName: userToAdd.name.givenName,
@@ -88,52 +72,18 @@ exports.findOrCreate = function(userToAdd, next) {
     });
 
   });
+
 };
 
 
-function buildFriendPlaceList(friendList) {
-  
-  console.log('buidling friend place list');
-  var placeList = [];
-  friendList.forEach(function(friend) {
-    
-    console.log('going through ', friend.username, ' places');
-    
-    friend.ownedPlaces.forEach(function(place) {
-
-      var placeIndex = binary.indexOf(placeList, {place_id: place.place_id}, placeCompare);
-     
-      console.log('place ', place.place_id, ' has index ', placeIndex, 'in placeList ', placeList);
-
-      
-      if (placeIndex >= 0) {
-        
-        placeList[placeIndex].savedBy.push(friend.username);
-        console.log(placeList);
-        
-      } else {
-        
-        place.savedBy = [friend.username];
-        placeList = binary.insert(placeList, place, placeCompare);
-        console.log(placeList);
-      }
-      
-    });
-  
-  });
-    return placeList;
-  
-  
-}
 
 exports.getInfo = function(userId, next) {
 
   // custom friend field population so can't use 'lookupUser'  
   // could still use promises though
-  
   User.findOne({
     userId: userId
-  }).populate('friends', 'firstName lastName userId ownedPlaces username').exec(function(err, user) {
+  }).populate('friends', 'firstName lastName userId ownedPlaces username placeCount').exec(function(err, user) {
     if (err) return next({
       message: "Error looking up user"
     });
@@ -203,18 +153,6 @@ function lookupUser(query) {
 }
 
 
-
-/*********************/
-
-// can be greatly improved through generators + storing the data differently
-// // ordered lists would allow for binary search.
-// function findFriendIndex(friendList, friendId) {
-
-//   for (var i = 0; i < friendList.length; i++)
-//     if (friendList[i].userId === friendId) return i;
-//   return -1;
-
-// }
 
 
 exports.addRequest = function(friendUsername, userAdding) {
@@ -351,7 +289,14 @@ exports.addFriend = function(userId, friendId) {
               if (err) return rej({
                 message: "error saving user's profile..."
               });
-              return res();
+              return res({
+                          userId: friend.userId,
+                          firstName: friend.firstName,
+                          lastName: friend.lastName,
+                          savedPlaces: friend.savedPlaces,
+                          username: friend.username,
+                          placeCount: friend.placeCount
+                        });
             });
           });
 
@@ -436,11 +381,11 @@ exports.addPlace = function(userId, place) {
 
         console.log('\tplace not already there');
 
-        place.placeOwner = userId;
-
         user.ownedPlaces = binary.insert(user.ownedPlaces, place, placeCompare);
         // user.ownedPlaces[place.place_id] = place;
         user.markModified('ownedPlaces');
+
+        user.placeCount++;
 
         console.log('\ttrying to save');
         // A named function should replace the user.save callback
@@ -468,9 +413,6 @@ exports.removePlace = function(userId, place) {
       lookupUser({ userId: userId }).then(function(user) {
 
         console.log("\tremoving ", user.ownedPlaces);
-        // if (findPlaceIndex(user.ownedPlaces, placeId) !== -1) return rej({
-        //   message: "Place is already saved :o"
-        // });
 
         var placeIndex = binary.indexOf(user.ownedPlaces, {place_id: place.place_id}, placeCompare);
 
@@ -481,6 +423,8 @@ exports.removePlace = function(userId, place) {
 
         user.ownedPlaces.splice(placeIndex, 1);
         user.markModified('ownedPlaces');
+
+        user.placeCount--;
 
         console.log('\ttrying to save');
         // A named function should replace the user.save callback
@@ -499,3 +443,61 @@ exports.removePlace = function(userId, place) {
   );
 
 };
+
+
+
+function serealizeUserResult(userRecord) {
+
+  return ({
+    id: userRecord.userId,
+    firstName: userRecord.firstName,
+    username: userRecord.username,
+    lastName: userRecord.lastName,
+    friends: userRecord.friends,
+    ownedPlaces: userRecord.ownedPlaces,
+    friendsPlaces: userRecord.friendsPlaces,
+    placeCount: userRecord.placeCount,
+    friendCount: userRecord.friendCount,
+    friendRequests: userRecord.friendRequests,
+    requestCount: userRecord.requestCount
+  });
+
+}
+
+
+// Makes me really sad. Takes quadratic time to pull the list
+// every time a page is refreshed.
+// I'm really unsure how to improve this.
+function buildFriendPlaceList(friendList) {
+  
+  console.log('buidling friend place list');
+  var placeList = [];
+  friendList.forEach(function(friend) {
+    
+    console.log('going through ', friend.username, ' places');
+    
+    friend.ownedPlaces.forEach(function(place) {
+
+      var placeIndex = binary.indexOf(placeList, {place_id: place.place_id}, placeCompare);
+     
+      console.log('place ', place.place_id, ' has index ', placeIndex, 'in placeList ', placeList);
+
+      
+      if (placeIndex >= 0) {
+        
+        placeList[placeIndex].savedBy.push(friend.username);
+        console.log(placeList);
+        
+      } else {
+        
+        place.savedBy = [friend.username];
+        placeList = binary.insert(placeList, place, placeCompare);
+        console.log(placeList);
+      }
+      
+    });
+  
+  });
+    return placeList;
+
+}

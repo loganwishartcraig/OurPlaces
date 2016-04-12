@@ -218,6 +218,8 @@ hr {
   -moz-box-sizing: content-box;
   box-sizing: content-box;
   height: 0;
+  border: 0;
+  margin: 0;
 }
 
 /**

@@ -21,85 +21,62 @@
         <div class="filters--container">
           <span class="control--header">OurPlaces</span>
           <ul id="filterContainer" class="filter--ctrls">
+            <li class="filter--header">Filters</li>
             <li class="filter--ctrl">
               <button id="filterMyPlaces" class="filter--btn">My Places</button>
             </li>
-            <li>
+            <li class="filter--ctrl">
               <button id="filterFriendPlaces" class="filter--btn">Everyones Places</button>
             </li>
           </ul>
         </div>
-        <button class="friend--show--btn">
-        My Friends
-            <!-- <span class="friend--header">My Friends</span> -->
-            <!-- <ul class="friend--list">
-              {{#if user.friendCount}}
-              {{#each user.friends}}
-              <li class="friend--item">
-                <span class="friend--name">{{this.username}} | {{this.firstName}} <button class="friend--remove--btn" friend_id="{{this.userId}}">X</button></span>
-              </li>
-              {{/each}} {{else}}
-                <li class="friend--item">
- <span class="friend--name empty">no friends yet :(</span>
-              </li>
-              {{/if}}
-            </ul> -->
+        <button id="showFriends" class="friend--show--btn">
+          <span class="friend--show--txt">My Friends</span>
         </button>
-        <div class="request--contianer">
-          <div class="request--input--container">
-            <input id="addFriendInput" class="request--input" type="text" name="friendUsername" placeholder="Buddy Username">
-            <button id="addFriendSubmit" class="request--btn">ADD</button>
-            <span id="requestStatus" style="display: block; text-align: center; margin-top: .5rem; color: red; font-style: italic; font-size: .8rem"></span>
-          </div>
-        </div>
         <div class="account--container">
-          <span>{{user.firstName}}</span><br>
+          <b>{{user.firstName}}</b>
+          <hr>
           <span id="username">{{user.username}}</span>
           <div class="mail--container">
-          <div id="openMail" class="mail--notification">
-            {{#if user.requestCount}}
-            <div class="mail--img active">&nbsp;</div>
-            <span class="mail--txt active">{{user.requestCount}}</span> {{else}}
-            <div class="mail--img inactive">&nbsp;</div>
-            <span class="mail--txt inactive">0</span> {{/if}}
+            <div id="openMail" class="mail--notification">
+              {{#if user.requestCount}}
+              <div class="mail--img active">&nbsp;</div> {{else}}
+              <div class="mail--img inactive">&nbsp;</div> {{/if}}
             </div>
           </div>
-          <div class="settings--container"></div>
         </div>
+        <button class="logout--btn">Logout</button>
       </div>
       <div class="map--area">
-      
-        <div class="friend--overlay">
-          
-
-
-          <div class="dim-bg full--height"></div>
-          <h3 class="friend--filter--header">Find Someone</h3>
-          <input class="friend--filter" type="text" placeholder="Search For Ur m8s" selected>
-
-            <ul class="friend--container">
-
-
-{{#if user.friendCount}}
-              {{#each user.friends}}
+        <div class="friend--overlay hide">
+          <div class="friend--header">
+            <h3 class="friend--filter--header">Add Someone!</h3>
+            <input id="friendFilterInput" class="friend--filter" type="text" placeholder="Search For Ur m8s" selected>
+            <button id="addFriendSubmit" class="add--btn">+</button><hr />
+            <span id="requestStatus" class="error--text pink"></span>
+          </div>
+          <div class="friend--body">
+            <ul id="friendList" class="friend--list">
+              {{#if user.friendCount}} {{#each user.friends}}
               <li class="friend--item">
-                <span class="friend--name">{{this.username}} | {{this.firstName}} <button class="friend--remove--btn" friend_id="{{this.userId}}">X</button></span>
+                <img class="friend--pic" src="//d.thumbs.redditmedia.com/gaEfD4wv-quK4LR9.png">
+                <span class="friend--name"><b>{{this.username}}</b> | {{this.firstName}} {{this.lastName}}</span>
+                <span class="friend--save--count">Saved {{this.placeCount}} Places.</span>
+                <button class="friend--remove" friend_id="{{this.userId}}">X</button>
               </li>
-              {{/each}} {{else}}
-                <li class="friend--item">
- <span class="friend--name empty">no friends yet :(</span>
+              {{/each}}
+<li class="friend--item empty hide">
+                <span class="friend--name empty">no friends yet :(</span>
+              </li>
+              {{else}}
+              <li class="friend--item empty">
+                <span class="friend--name empty">no friends yet :(</span>
               </li>
               {{/if}}
-
-
             </ul>
-
           </div>
-
-
-
-
-        <div class="controls--container blur">
+        </div>
+        <div class="controls--container">
           <div class="search--container">
             <input id="placeSearchInput" class="search--input" type="text" name="placeSearchString" placeholder="Search, e.g. 'Sodosopah'">
             <ul id="predictiveContainer" class="predictive--results">
@@ -113,18 +90,34 @@
           <button id="placesSearchSubmit" class="search--btn">SEARCH</button>
         </div>
         <ul id="notifications" class="mail--items hide">
-        {{#if user.requestCount}}
-            {{#each user.friendRequests}}
-              <li request_id="{{this.userId}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span><div friend_id="{{this.userId}}" class="mail--actions"><button class="mail--btn accept">✓</button><button class="mail--btn reject">X</button></div></li>
-            {{/each}}
-        {{else}}
-            <li><span>No Requests : /</span>
-        {{/if}}
-            <li id="closeMail"><button>Close</button></li>
-            </ul>
-        <div id="map" class="map blur">
+          {{#if user.requestCount}} {{#each user.friendRequests}}
+          <li request_id="{{this.userId}}"><span class="mail--name" title="{{this.firstName}} {{this.lastName}}">{{this.firstName}} {{this.lastName}}</span>
+            <div friend_id="{{this.userId}}" class="mail--actions">
+              <button class="mail--btn accept">✓</button>
+              <button class="mail--btn reject">X</button>
+            </div>
+          </li>
+          {{/each}}
+          <li class="friend--request empty hide"><span>No Requests : /</span> {{else}}
+            <li class="friend--request empty"><span>No Requests : /</span> 
+            {{/if}}
+              <li id="closeMail">
+                <button>Close</button>
+              </li>
+        </ul>
+        <div id="map" class="map">
         </div>
       </div>
+    </div>
+  </div>
+  <div style="display: none;">
+    <div id="friendTemplate">
+      <li class="friend--item">
+        <img class="friend--pic" src="//d.thumbs.redditmedia.com/gaEfD4wv-quK4LR9.png">
+        <span class="friend--name"><b>%%USERNAME%%</b> | %%FNAME%% %%LNAME%%</span>
+        <span class="friend--save--count">Saved %%PLACE_COUNT%% Places.</span>
+        <button class="friend--remove" friend_id="%%FRIEND_ID%%">X</button>
+      </li>
     </div>
   </div>
   <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9eJ1ddUa7R5OV1lXGrJ81j18-BTy0Z5I&libraries=places"></script>
