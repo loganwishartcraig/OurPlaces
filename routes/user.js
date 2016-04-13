@@ -144,7 +144,7 @@ router.post('/acceptRequest', verifyAuth, function(req, res) {
 // !-- NOTE: Similar to 'removeRequest'?
 router.post('/removeFriend', verifyAuth, function(req, res) {
 
-  // console.log("\REMOVE FRIEND FROM: \t\t", req.user.id);
+  // console.log("\tREMOVE FRIEND FROM: \t\t", req.user.id);
   // console.log("\tAS USER: \t\t", req.user.id);
 
   // send OK if save is successful,
@@ -159,17 +159,16 @@ router.post('/removeFriend', verifyAuth, function(req, res) {
 
 
 // addPlace route, lets the user save a place.
-// Uses the user Id to look up a user and an edited Google Maps
+// Uses the user Id to look up a user and a modified Google Maps
 // place object to save the place.
 router.post('/addPlace', verifyAuth, function(req, res) {
 
-  // console.log("\ADD PLACE: \t\t", req.body.place);
+  // console.log("\tADD PLACE: \t\t", req.body.place);
   // console.log("\tTO USER: \t\t", req.user.id);
 
-  // send a new list of saved ('owned') places if ok,
+  // send a new list of saved ('owned') places if OK,
   // otherwise send the error
-  // !-- NOTE: this is the only function that returns it's own object
-  // !-- instead of passing it from 'userSer' 
+  // !-- NOTE: should 'userService.addPlace' return the message/ownedPlaces object?
   userService.addPlace(req.user.id, JSON.parse(req.body.place)).then(function(newOwnedPlaces) {
     res.json({
       message: 'Savvveeed place.',
@@ -180,7 +179,18 @@ router.post('/addPlace', verifyAuth, function(req, res) {
   });
 });
 
+
+// removePlace route, lets the user remove a saved place.
+// Uses the user Id to look up the user and Google Maps place
+// object to match against the to remove
 router.post('/removePlace', verifyAuth, function(req, res) {
+
+  // console.log("\tREMOVE PLACE: \t\t", req.body.place);
+  // console.log("\tFROM USER: \t\t", req.user.id);
+
+  // send a new list of saved ('owned') places if OK,
+  // otherwise send the error
+  // !-- NOTE: should 'userService.removePlace' return the message/ownedPlaces object?
   userService.removePlace(req.user.id, JSON.parse(req.body.place)).then(function(newOwnedPlaces) {
     console.log('\tplace REMOVED!');
     res.json({

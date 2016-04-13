@@ -1,4 +1,6 @@
+// provides an interface to the user database
 
+// initial dependencies
 var mongoose = require('mongoose');
 var User = require('../models/userModel');
 
@@ -6,9 +8,15 @@ var binaryOps = require('../util/binaryOperations.js');
 var binary = new binaryOps();
 
 
-/* SHOULD BE IN ITS OWN FILE */
-/* NEEDS ATTENTION */
 
+/***************************************************************/
+/* NEEDS ATTENTION */
+/* SHOULD BE IN ITS OWN FILE */
+// !-- NOTE: Could have consolidated request/userId
+
+// helper function used to compare friend requests
+// to determine/enforce order. Expects two objects that have
+// numerical 'id' properties
 function requestCompare(data, term) {
   var id = parseInt(data.id, 10);
   term = parseInt(term.id, 10);
@@ -17,6 +25,9 @@ function requestCompare(data, term) {
   else return -1;
 }
 
+// helper function used to compare users
+// to determine/enforce order. Expects two objects that have
+// numerical 'userId' properties
 function userIdCompare(data, term) {
   var id = parseInt(data.userId, 10);
   term = parseInt(term.userId, 10);
@@ -25,6 +36,9 @@ function userIdCompare(data, term) {
   else return -1;
 }
 
+// helper function used to compare GM place objects
+// to determine/enforce order. Expects two objects that have
+// 'place_id' properties
 function placeCompare(data, term) {
   var id = data.place_id;
   term = term.place_id;
@@ -32,43 +46,77 @@ function placeCompare(data, term) {
   else if (id > term) return 1;
   else return -1;
 }
-
-/*******/
-
+/***************************************************************/
 
 
-// returns user if user found so can't use lookupuser
+// helper function that looks up a user using
+// a 'query' object. Will return a promise
+// that will resolve with the user.
+function lookupUser(query) {
+
+  return (new Promise(function(res, rej) {
+
+    User.findOne(query)
+    
+      // !-- NOTE: returns full friend db entry, could include
+      // !-- some option to limit this
+      .populate('friends')
+      .exec(function(err, user) {
+        if (err) return rej({
+          message: "DB error looking up user"
+        });
+      
+        // if user not found, reject.
+        // !-- NOTE: Should this maybe be optional?
+        // !-- Could add a parameter to skip this check?
+        if (!user) return rej({
+          message: "User not found"
+        });
+      
+        console.log("Found User");
+        return res(user);
+      });
+
+  }));
+
+}
+
+
+// looks up a db entry based on user Id (provided by Google OAuth)
+// and returns a user's entry if found or creates
+// and returns a new entry if one does not exist.
+// expects a google oauth user object, and a callback.
+// !-- NOTE: relies on the layout of the google oAuth user object.
+// !-- how to make it more flexible? This should be a promise as well.
 exports.findOrCreate = function(userToAdd, next) {
 
-  console.log("finding user");
 
+  // lookup user based on 'id' property
   User.findOne({
     userId: userToAdd.id
   }, function(err, user) {
-    console.log(user, userToAdd.id);
+    
     if (err) return next({
       message: "Error looking up user"
     });
+
     if (user) return next(null, user);
-
-    console.log("making user");
-
-    // relies on the layout of the google oAuth syntax
-    // should abstract out?
+    
+    // create the new user
+    // !-- NOTE: Perhaps this should be it's own function?
     var newUser = new User({
       userId: userToAdd.id,
       firstName: userToAdd.name.givenName,
       lastName: userToAdd.name.familyName
     });
 
-    console.log("saving user", newUser);
-
+    // save the user. 
+    // If error, return it, otherwise return the user
     newUser.save(function(err, user) {
       if (err) return next({
         message: "Error saving user"
       });
-      console.log("no error saving", user.id);
-      if (user) return next(false, user.userId);
+      if (user) return next(false, user);
     });
 
   });
@@ -76,44 +124,62 @@ exports.findOrCreate = function(userToAdd, next) {
 };
 
 
-
+// function used to pull user info for a given userId.
+// returns serialized user information via callback
+// !-- NOTE: This could also be a promise.
 exports.getInfo = function(userId, next) {
 
-  // custom friend field population so can't use 'lookupUser'  
-  // could still use promises though
+
+  // lookup user via ID, and populate appropriate friend fields
   User.findOne({
     userId: userId
   }).populate('friends', 'firstName lastName userId ownedPlaces username placeCount').exec(function(err, user) {
+    
+ 
     if (err) return next({
       message: "Error looking up user"
     });
+    
     if (!user) return next({
       message: "User not found"
     });
 
-    var friendPlaceList = buildFriendPlaceList(user.friends);
-    console.log(friendPlaceList);
-    user.friendsPlaces = friendPlaceList;
+    // builds a list of your friends saved places & saves to 'friendsPlaces' attr.
+    user.friendsPlaces = buildFriendPlaceList(user.friends);
     
+    // return the serealized user profile
     return next(null, serealizeUserResult(user));
   });
 
 
 };
 
+
+// function used to set a users username.
+// looks up user by userId and will update the record
+// with the username provided.
+// !-- NOTE: Should rejection of invaliad 'username' values be done here
+// !-- or in the associated route? Here?
 exports.setUsername = function(userId, username) {
 
   return (new Promise(function(res, rej) {
 
+    
+    // first check to see if user with 'username' exists
     User.findOne({
       username: username
     }).exec(function(err, user) {
+      
+      // if error or user exists, return error
       if (err) return rej({ message: "Error finding user" });
       if (user) return rej({ message: "Username already exists :x" });
 
+      // otherwise lookup user record and update username.
       lookupUser({ userId: userId }).then(function(user) {
 
         user.username = username;
+        
+        // save the record and return nothing
         user.save(function(err) {
           if (err) return rej({ message: "Error setting " });
           return res();
@@ -130,54 +196,39 @@ exports.setUsername = function(userId, username) {
 };
 
 
-
-function lookupUser(query) {
-
-  return (new Promise(function(res, rej) {
-
-    User.findOne(query)
-      .populate('friends')
-      .exec(function(err, user) {
-        if (err) return rej({
-          message: "DB error looking up user"
-        });
-        if (!user) return rej({
-          message: "User not found"
-        });
-        console.log("Found User");
-        return res(user);
-      });
-
-  }));
-
-}
-
-
-
-
+// function to push a friend request to a users
+// profile. Expects a username to look up the friend,
+// and a user object to populate the request information.
+// !-- NOTE: Because the google user object doesn't have the local
+// !-- 'username' field, you can't store that without looking up the user adding
+// !-- in the DB. This should be fixed. Would also let you error check for
+// !-- adding yourself earlier. 
+// !-- BUG: You can add a request to someone who you have an active request from
+// !-- and it wont be removed if you add them/they add you.
 exports.addRequest = function(friendUsername, userAdding) {
 
   return (
     new Promise(function(res, rej) {
             
-      console.log('looking up ', friendUsername);
-
       var userAddingId = userAdding.id;
 
       lookupUser({ username: friendUsername }).then(function(user) {
 
-        // need to ensure you can't add a request to someone whom you have an active request from.
-        
-        console.log("\t\tChecking existing requests/firends");
+        // Checks if you're trying to add yourself
         if (user.userId === userAddingId) return rej({ message: "u can't add urself :/" });
+        
+        // Checks if you have already sent them a request
         if (binary.exists(user.friendRequests, {userId: userAddingId}, userIdCompare)) return rej({
           message: "Request already pending :o"
         });
+
+        // Checks if your're already friends
         if (binary.exists(user.friends, {userId: userAddingId}, userIdCompare)) return rej({
           message: "User is already ur friend ;)"
         });
-        console.log("\t\tPushing request");
         
+        // Build the request
+        // !-- NOTE: could/should be it's own function?
         var request = {
           userId: userAddingId,
           firstName: userAdding.name.givenName,
@@ -186,12 +237,15 @@ exports.addRequest = function(friendUsername, userAdding) {
           dateRequested: Date.now()
         };
 
+        // push the request using binary.insert
         user.friendRequests = binary.insert(user.friendRequests, request, userIdCompare);
         user.markModified('friendRequests');
+        
+        // incr request count by 1
         user.requestCount++;
-        console.log("\t\tSaving user ", user);
+        
+        // save the record and return nothing
         user.save(function(err) {
-          console.log("\t\tSAVED");
           if (err) return rej({
             message: "Error saving user"
           });
@@ -207,14 +261,18 @@ exports.addRequest = function(friendUsername, userAdding) {
 
 };
 
+
+// a function used to remove a friend request from
+// a users profile. Uses user ID to lookup the user account
+// and a friends user ID to remove the request.
 exports.removeRequest = function(userToRemove, userId) {
 
   return (
     new Promise(function(res, rej) {
 
       lookupUser({ userId: userId }).then(function(user) {
-        console.log(userToRemove);
 
+        // get index of current friend request.
         var friendRequestIndex = binary.indexOf(user.friendRequests, {userId: userToRemove}, userIdCompare);
         
         if (friendRequestIndex === undefined) return rej({

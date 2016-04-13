@@ -1,3 +1,6 @@
+// model used for users
+
+// initial dependencies
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 

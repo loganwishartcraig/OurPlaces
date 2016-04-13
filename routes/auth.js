@@ -1,4 +1,4 @@
-//routes used for authentication purposes
+// routes used for authentication purposes
 
 // initial dependencies
 var express = require('express');
