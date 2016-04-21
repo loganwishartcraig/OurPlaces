@@ -82,6 +82,69 @@ function lookupUser(query) {
 }
 
 
+// helper function used to strip out fields 
+// other areas of the app should not have access to.
+// !-- NOTE: Seems somewhat unecessary for the current app, 
+// !-- but is probably not a bad idea
+function serealizeUserResult(userRecord) {
+
+  return ({
+    id: userRecord.userId,
+    firstName: userRecord.firstName,
+    username: userRecord.username,
+    lastName: userRecord.lastName,
+    friends: userRecord.friends,
+    ownedPlaces: userRecord.ownedPlaces,
+    friendsPlaces: userRecord.friendsPlaces,
+    placeCount: userRecord.placeCount,
+    friendCount: userRecord.friendCount,
+    friendRequests: userRecord.friendRequests,
+    requestCount: userRecord.requestCount
+  });
+
+}
+
+
+// helper function used to build a list of places
+// saved by you friends. Goes through every friend
+// and all their places and builds a 'placelist'.
+// Also add's the 'savedBy' property + updates
+// if > 1 user has saved a given place.
+// !-- NOTE: I'm really unsure how to improve this, but it feels
+// !-- really inefficient.
+function buildFriendPlaceList(friendList) {
+  
+  var placeList = [];
+  
+  friendList.forEach(function(friend) {
+    
+    friend.ownedPlaces.forEach(function(place) {
+
+      // find index of place in 'placeList'
+      var placeIndex = binary.indexOf(placeList, {place_id: place.place_id}, placeCompare);
+     
+      // if place has already been added, add friend to 'savedBy'      
+      if (placeIndex >= 0) {
+        
+        placeList[placeIndex].savedBy.push(friend.username);
+        
+      // if not, push place to placeList after marking who saved it.
+      } else {
+        
+        place.savedBy = [friend.username];
+        placeList = binary.insert(placeList, place, placeCompare);
+
+      }
+      
+    });
+  
+  });
+
+    return placeList;
+
+}
+
+
 // looks up a db entry based on user Id (provided by Google OAuth)
 // and returns a user's entry if found or creates
 // and returns a new entry if one does not exist.
@@ -200,9 +263,9 @@ exports.setUsername = function(userId, username) {
 // profile. Expects a username to look up the friend,
 // and a user object to populate the request information.
 // !-- NOTE: Because the google user object doesn't have the local
-// !-- 'username' field, you can't store that without looking up the user adding
-// !-- in the DB. This should be fixed. Would also let you error check for
-// !-- adding yourself earlier. 
+// !-- 'username' field, you can't store that without looking up the user 
+// !-- who's adding in the DB. This should be fixed. Would also let you 
+// !-- error check for adding yourself earlier. 
 // !-- BUG: You can add a request to someone who you have an active request from
 // !-- and it wont be removed if you add them/they add you.
 exports.addRequest = function(friendUsername, userAdding) {
@@ -272,14 +335,14 @@ exports.removeRequest = function(userToRemove, userId) {
 
       lookupUser({ userId: userId }).then(function(user) {
 
-        // get index of current friend request.
+        // get index of current friend request, returns -1 if not found.
         var friendRequestIndex = binary.indexOf(user.friendRequests, {userId: userToRemove}, userIdCompare);
         
-        if (friendRequestIndex === undefined) return rej({
+        if (friendRequestIndex === -1) return rej({
           message: "No request from the user :/"
         });
 
-
+        // remove the request
         user.friendRequests.splice(friendRequestIndex, 1);
         user.markModified('friendRequests');
 
@@ -302,7 +365,9 @@ exports.removeRequest = function(userToRemove, userId) {
 };
 
 
-
+// function to add a two users to each others friend list.
+// takes two user Id's, looks the user up both users then
+// updates their friend lists.
 exports.addFriend = function(userId, friendId) {
 
   return (
@@ -310,9 +375,10 @@ exports.addFriend = function(userId, friendId) {
 
       lookupUser({ userId: userId }).then(function(user) {
 
+        // find index of friend request
         var userReqIndex = binary.indexOf(user.friendRequests, {userId: friendId}, userIdCompare);
 
-        if (userReqIndex === undefined) return rej({
+        if (userReqIndex === -1) return rej({
           message: "User hasn't requested ur friendship :o"
         });
 
@@ -326,15 +392,17 @@ exports.addFriend = function(userId, friendId) {
             message: "Friend alraedy has u as a friend? :s"
           });
 
+          // remove request from friend
           user.friendRequests.splice(userReqIndex, 1);
           user.markModified('friendRequests');
           user.requestCount--;
 
+          // add friend to users friend list
           user.friends = binary.insert(user.friends, friend, userIdCompare);
           user.markModified('friends');
           user.friendCount++;
 
-
+          // add user to friends friend list
           friend.friends = binary.insert(friend.friends, user, userIdCompare);
           friend.markModified('friends');
           friend.friendCount++;
@@ -347,6 +415,10 @@ exports.addFriend = function(userId, friendId) {
               if (err) return rej({
                 message: "error saving user's profile..."
               });
+
+              // return serialized friend information.
+              // used to populate friend item in view.
+              // !-- NOTE: Should this be a function?
               return res({
                           userId: friend.userId,
                           firstName: friend.firstName,
@@ -370,18 +442,19 @@ exports.addFriend = function(userId, friendId) {
   );
 };
 
-exports.removeFriend = function(userId, friendId) {
 
+// function to remove a friend. Takes to user Ids
+// and removes both users from the others friends list.
+exports.removeFriend = function(userId, friendId) {
 
   return (new Promise(function(res, rej) {
     lookupUser({ userId: userId }).then(function(user) {
       console.log(friendId);
 
+      // find friend index
       var userFriendIndex = binary.indexOf(user.friends, {userId: friendId}, userIdCompare);
 
-      console.log('userFriendIndex: ' + userFriendIndex);
-
-      if (userFriendIndex === undefined) return rej({
+      if (userFriendIndex === -1) return rej({
         message: "But, u aren't friends with them :/"
       });
 
@@ -390,14 +463,16 @@ exports.removeFriend = function(userId, friendId) {
 
         var friendFriendIndex = binary.indexOf(friend.friends, {userId: userId}, userIdCompare);
 
-        if (friendFriendIndex === undefined) return rej({
+        if (friendFriendIndex === -1) return rej({
           message: "Friend doesn't have u added? :x"
         });
 
+        // remove friend from users list
         user.friends.splice(userFriendIndex, 1);
         user.markModified('friends');
         user.friendCount--;
 
+        // remove user from friends list
         friend.friends.splice(friendFriendIndex, 1);
         friend.markModified('friends');
         friend.friendCount--;
@@ -424,6 +499,12 @@ exports.removeFriend = function(userId, friendId) {
 
 };
 
+
+
+// function to save a Google Maps place to your account.
+// Looks up user based on ID and saves the full GM place object.
+// !-- NOTE: should this maybe be in a seperate file/handled with a seperate route?
+// !-- Legality? Can I actually save local copies of google maps places?
 exports.addPlace = function(userId, place) {
 
   return (
@@ -431,22 +512,16 @@ exports.addPlace = function(userId, place) {
 
       lookupUser({ userId: userId }).then(function(user) {
 
-        console.log("\tsaving ", user.ownedPlaces);
-
         if (binary.exists(user.ownedPlaces, {place_id: place.place_id}, placeCompare)) return rej({
           message: "Place is already saved :o"
         });
 
-        console.log('\tplace not already there');
-
+        // add place and update place count
         user.ownedPlaces = binary.insert(user.ownedPlaces, place, placeCompare);
-        // user.ownedPlaces[place.place_id] = place;
         user.markModified('ownedPlaces');
-
         user.placeCount++;
 
-        console.log('\ttrying to save');
-        // A named function should replace the user.save callback
+        // return an updated list of owned places.
         user.save(function(err, user) {
           if (err) return rej({
             message: "Error saving user"
@@ -463,6 +538,12 @@ exports.addPlace = function(userId, place) {
 
 };
 
+
+// function used to remove a place from an account.
+// very similar to addPlace.
+// !-- NOTE: currently accepts a full place object,
+// !-- shoudl this be updated to only accept place Id
+// !-- since no other place attributes are used?
 exports.removePlace = function(userId, place) {
 
   return (
@@ -470,22 +551,19 @@ exports.removePlace = function(userId, place) {
 
       lookupUser({ userId: userId }).then(function(user) {
 
-        console.log("\tremoving ", user.ownedPlaces);
-
+        // find place index
         var placeIndex = binary.indexOf(user.ownedPlaces, {place_id: place.place_id}, placeCompare);
 
-        if (placeIndex < 0) return rej({
+        if (placeIndex === -1) return rej({
           message: "Place was not already saved :o"
         });
-        console.log('\tplace is there');
 
+        // remove place from list + update
         user.ownedPlaces.splice(placeIndex, 1);
         user.markModified('ownedPlaces');
-
         user.placeCount--;
 
-        console.log('\ttrying to save');
-        // A named function should replace the user.save callback
+        // return an update list of owned places
         user.save(function(err, user) {
           if (err) return rej({
             message: "Error saving user"
@@ -503,59 +581,3 @@ exports.removePlace = function(userId, place) {
 };
 
 
-
-function serealizeUserResult(userRecord) {
-
-  return ({
-    id: userRecord.userId,
-    firstName: userRecord.firstName,
-    username: userRecord.username,
-    lastName: userRecord.lastName,
-    friends: userRecord.friends,
-    ownedPlaces: userRecord.ownedPlaces,
-    friendsPlaces: userRecord.friendsPlaces,
-    placeCount: userRecord.placeCount,
-    friendCount: userRecord.friendCount,
-    friendRequests: userRecord.friendRequests,
-    requestCount: userRecord.requestCount
-  });
-
-}
-
-
-// Makes me really sad. Takes quadratic time to pull the list
-// every time a page is refreshed.
-// I'm really unsure how to improve this.
-function buildFriendPlaceList(friendList) {
-  
-  console.log('buidling friend place list');
-  var placeList = [];
-  friendList.forEach(function(friend) {
-    
-    console.log('going through ', friend.username, ' places');
-    
-    friend.ownedPlaces.forEach(function(place) {
-
-      var placeIndex = binary.indexOf(placeList, {place_id: place.place_id}, placeCompare);
-     
-      console.log('place ', place.place_id, ' has index ', placeIndex, 'in placeList ', placeList);
-
-      
-      if (placeIndex >= 0) {
-        
-        placeList[placeIndex].savedBy.push(friend.username);
-        console.log(placeList);
-        
-      } else {
-        
-        place.savedBy = [friend.username];
-        placeList = binary.insert(placeList, place, placeCompare);
-        console.log(placeList);
-      }
-      
-    });
-  
-  });
-    return placeList;
-
-}

@@ -56,10 +56,20 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+	// Main frontend JS file.
+
+	// !-- NOTE: The whole application doesn't need to be wrapped
+	// !-- in the 'ready' function. Could maybe wrap the 'registerHandlers'
+	// !-- function, and have code set the nodes for the services/controllers as well?
+	// !-- What would the best way to avoid having lots of global variables, would it be
+	// !-- better to have them wrapped in an 'app' object or something?
 	$(document).ready(function () {
 
 	  // register variables for global access
-	  var map;
+	  // !-- NOTE: Feels like there are lots of variables here,
+	  // !-- should they be included in seperate files when possible?
+	  // !-- Is the way I've set it up even an acceptable practice?
+	  var map; // !-- NOTE: not a great name.
 	  var searchServices;
 	  var searchTextBox;
 	  var userInterface;
@@ -68,38 +78,46 @@
 	  var friendController;
 	  var setMessage;
 
+	  // function called on app load, used to set all global vairables
+	  // and initalize the application.
 	  function initialize() {
 
 	    // used to centralize setting messages
 	    setMessage = new messageService();
 
-	    // sets up interface for user account
+	    // sets up interface for user account to interact with
+	    // user routes
 	    userInterface = new UserInterface();
 
-	    // Load google map on element w/ id 'map'
+	    // Load google map interface & map on element w/ id 'map'.
 	    map = new MapArea("map");
 
 	    // Centralize interface w/ google services.
 	    searchServices = new SearchServices(map.map);
 
-	    // binds a textbox class to search box
+	    // caches search box node
 	    searchTextBox = $("#placeSearchInput");
 
-	    // sets up predictive search
+	    // sets up predictive search & binds 'predictiveContainer'
 	    prefetchResults = new PrefetchResults("#predictiveContainer");
 
 	    // binds controller to update notifications
 	    notifications = new notificationController("#notifications");
 
-	    // binds conroller to update friends
+	    // binds conroller to handle actions regarding friends
 	    friendController = new FriendController("#friendList");
 
 	    // register global event handlers
 	    registerHandlers();
 	  }
 
+	  // generic class used to set messages to nodes
+	  // or log to console. Most often used in callbacks.
+	  // !-- NOTE: Feels like this might not need to be it's own class
 	  function messageService() {
 
+	    // sets the text of some selector, and clears it
+	    // after 5 seconds. Only works for single-node selectors
 	    this.setGeneric = function (selector, text) {
 	      var node = $(selector);
 
@@ -109,13 +127,21 @@
 	      }, 5000);
 	    };
 
+	    // logs data to console. Used mostly in promsie rejection handlers
 	    this.setConsole = function (data) {
 	      console.log(data);
 	    };
 	  }
 
+	  // class used to provide an interface to the 'user' object.
+	  // Uses AJAX calls to push changes & pull data to '/user/*' routes
+	  // !-- NOTE: Not sure how well structured this is. Should it be broken
+	  // !-- down into more objects?
+	  // !-- It seems like this could also be it's own file.
 	  function UserInterface() {
 
+	    // initalization function makes the inital call
+	    // to pull user info from the DB.
 	    this.init = function () {
 	      $.get('/user/getUser').success(function (data) {
 	        console.log('got user', data);
@@ -123,6 +149,16 @@
 	      }.bind(this)).error(setMessage.setConsole);
 	    };
 
+	    // getter function for userId field
+	    // !-- NOTE: is this necessary? Included
+	    // !-- in case id attribute changes later
+	    this.getUserId = function () {
+	      return this.user.id;
+	    };
+
+	    // helper function used to determine if a user
+	    // has a specific place saved.
+	    // !-- NOTE: could be imporved by using binary search
 	    this.hasPlace = function (place_id) {
 
 	      for (var i = 0; i < this.user.ownedPlaces.length; i++) {
@@ -132,15 +168,21 @@
 	      return false;
 	    };
 
-	    this.removePlace = function (placeId) {
-	      delete this.user.ownedPlaces[placeId];
-	    };
-
+	    // function used to save a place to a users db entry.
+	    // POSTS a 'place' object to the '/addPlace' route
+	    // returns a promise that will resolve on success.
+	    // !-- NOTE: feels like maybe some sort of generator
+	    // !-- could have been used to reduce repetative code w/ other
+	    // !-- AJAX call methods like removePlace? Also, is a promise really needed here?
 	    this.savePlace = function (place) {
 
 	      return new _promise2.default(function (res, rej) {
-	        console.log('user interface is saving ', place);
 
+	        // console.log('user interface is saving ', place);
+
+	        // post place, then update 'ownedPlaces' to whatever the server returns
+	        // which will be a new place list. then resolve.
+	        // !-- NOTE: success/error functions should be abstracted out
 	        $.post('/user/addPlace', {
 	          place: (0, _stringify2.default)(place)
 	        }).success(function (data) {
@@ -152,11 +194,19 @@
 	      }.bind(this));
 	    };
 
+	    // function used to remove a place from a users db entry.
+	    // POSTS a 'place' object to the '/removePlace' route
+	    // returns a promise that will resolve on success.
+	    // !-- NOTE: route should only need place ID.
 	    this.removePlace = function (place) {
 
 	      return new _promise2.default(function (res, rej) {
-	        console.log('user interface is removing ', place);
 
+	        // console.log('user interface is removing ', place);
+
+	        // post place, then update 'ownedPlaces' to whatever the server returns
+	        // which will be a new place list. then resolve.
+	        // !-- NOTE: success/error functions should be abstracted out?
 	        $.post('/user/removePlace', {
 	          place: (0, _stringify2.default)(place)
 	        }).success(function (data) {
@@ -168,8 +218,16 @@
 	      }.bind(this));
 	    };
 
+	    // function used to post a friend request to the friends
+	    // db entry. POSTS to '/addRequest' route and just resolves on OK.
+	    // !-- NOTE: user's request data is populated server side, should it be
+	    // !-- generated here first, then error checked?
 	    this.sendRequest = function (friendUsername) {
 
+	      // console.log('user interface is sending a request to ', friendUsername);
+
+	      // post request, resolve on OK
+	      // !-- NOTE: these success/error functions should be generalized
 	      return new _promise2.default(function (res, rej) {
 
 	        $.post('/user/addRequest', {
@@ -182,10 +240,9 @@
 	      });
 	    };
 
-	    this.getUserId = function () {
-	      return this.user.id;
-	    };
-
+	    // function used to remove a friend request from a the user's accont.
+	    // Removes the request based on friend's Id. POSTS to '/removeFriend'
+	    // and resolves on OK.
 	    this.removeFriend = function (friendId) {
 
 	      return new _promise2.default(function (res, rej) {

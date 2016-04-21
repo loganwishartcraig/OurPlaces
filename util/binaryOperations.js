@@ -1,3 +1,6 @@
+// !-- NOTE: need to test this far more thoroughly
+// !-- especially given the applications dependency on it
+
 module.exports = function() {
 
   this.getClosestIndex = function(arr, toInsert, compare) {
